@@ -1,0 +1,18 @@
+{
+  "name": "draftversus",
+  "version": "1.0.0",
+  "description": "DraftVersus — vs-AI ve online 1v1 futbol kadro düellosu",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
