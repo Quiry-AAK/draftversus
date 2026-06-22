@@ -218,6 +218,11 @@ function shuffle(arr) {
   return a;
 }
 
+/* Mevkiye göre tipik boy (cm) — kaleci/stoper uzun, kanat/ön libero kısa */
+function genHeight(primary) {
+  const base = { KL: 190, STP: 187, SF: 184, DOS: 182, MOS: 179, OOS: 176, 'SĞB': 178, SLB: 178, 'SĞK': 175, SLK: 175, 'SĞA': 176, SLA: 176 }[primary] || 180;
+  return base + randi(-4, 5);
+}
 function makePlayer(primary, opts = {}) {
   const cluster = POS_CLUSTERS.find(c => c.primary === primary) || { primary, extras: [] };
   // esneklik: çoğu oyuncu tek mevki (62%), az kısmı esnek (30%), çok azı çok yönlü (8%)
@@ -245,6 +250,7 @@ function makePlayer(primary, opts = {}) {
     id: _uid++,
     name: opts.name || (pick(FIRST_INITIALS) + '. ' + pick(SURNAMES)),
     positions, pos: primary, type: arch.n, age, ovr, pot, stats, fatigue: 0,
+    height: opts.height != null ? opts.height : genHeight(primary),
     condition: 100, injuredMatches: 0,   // maçlar arası yorgunluk (0-100) + sakatlıkla kaçırılacak maç sayısı
     role: ROLES[primary] ? ROLES[primary][0] : '', task: defaultTask(primary),
   };

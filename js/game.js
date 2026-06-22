@@ -412,7 +412,7 @@
       case 'ht-ready': hostHalftimeReady(); break;
       case 'ht-resume': guestResume(); break;
       case 'm-result': applyGuestResult(m); break;
-      case 'between-ready': G.between = G.between || {}; G.between.oppReady = true; maybeAdvanceBetween(); break;
+      case 'between-ready': G._betweenReadyFor = G.series.matchNo; if (G.between) { G.between.oppReady = true; maybeAdvanceBetween(); } break;
     }
   }
 
@@ -1028,7 +1028,7 @@
       const dotBg = sp === 'KL' ? '#d9a017' : me.color;
       const fl = fitLevel(p, sp);
       const fitRing = fl === 'high' ? '' : fl === 'mid' ? 'outline:2px solid #d9a017;outline-offset:2px;' : 'outline:2px solid #e5484d;outline-offset:2px;';
-      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%" title="${p.name} · ${p.age} yaş · Güç ${p.ovr} · ${POS[sp].name}">
+      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%" title="${p.name} · ${p.type || p.pos} · ${p.age} yaş · ${p.height || '–'}cm · Güç ${p.ovr} · ${POS[sp].name}">
         <div class="dot" style="background:${dotBg};${fitRing}">${shortOf(p)}<span class="ovr">${p.ovr}</span><span class="task" style="background:${tc}"></span></div>
         <div class="nm">${p.name}</div><span class="tasklbl" style="background:${tc}">${task}</span></div>`;
     }).join('');
@@ -1114,9 +1114,10 @@
     return `<div class="card" style="overflow:hidden;margin-bottom:16px">
       <div class="flexc" style="gap:11px;padding:13px;background:#f4f8fe;border-bottom:1px solid var(--line2)">
         <div style="width:36px;height:36px;border-radius:9px;background:${G.me.color};display:flex;align-items:center;justify-content:center;font:800 12px var(--mono);color:#fff">${shortOf(p)}</div>
-        <div><div style="font-family:var(--arch);font-weight:800;font-size:15px">${p.name}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${onPitch ? POS[curPos].name : p.pos} · Güç ${p.ovr} · ${p.age} yaş</div></div>
+        <div><div style="font-family:var(--arch);font-weight:800;font-size:15px">${p.name}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${onPitch ? POS[curPos].name : p.pos} · Güç ${p.ovr} · ${p.age} yaş · ${p.height || '–'}cm</div></div>
       </div>
       <div style="padding:13px">
+        <div class="flexc" style="gap:6px;flex-wrap:wrap;margin-bottom:11px"><span class="flexbadge" style="color:#7c5cd6;background:#f3eefe">${p.type || p.pos}</span><span class="chip">${p.height || '–'} cm</span><span class="chip">${p.age} yaş</span></div>
         <div class="label" style="font-size:10px;margin-bottom:8px">Oynayabildiği Mevkiler</div>
         <div class="flexc" style="gap:5px;flex-wrap:wrap;margin-bottom:6px">${posChips}</div>
         ${onPitch ? `<div style="font:600 11px 'Hanken Grotesk';color:${fm.col};margin-bottom:13px">Bu mevkide uyum: <b>${fm.label}</b>${curFit === 'low' ? ' — kötü oynar' : curFit === 'none' ? ' — bu mevkide oynayamaz' : ''}</div>` : '<div style="margin-bottom:13px"></div>'}
@@ -1499,7 +1500,7 @@
         <div style="text-align:center;font-size:15px;color:#9aa1ac;margin:1px 0 8px">⇅</div>
         <div class="label" style="font-size:10px;margin-bottom:8px">Yedekten Gelecek ${out ? '<span class="muted" style="font-weight:600;text-transform:none">· dokun, anında değişir</span>' : ''}</div>
         <div class="sub-tok-grid">${benchRows}</div>
-        <div class="muted" style="font-size:10.5px;margin-top:8px;text-align:center">İpucu: çıkanı seç → geleni seç (anında) · ya da yedeği sahaya sürükle</div>
+        <div class="muted" style="font-size:10.5px;margin-top:8px;text-align:center">İpucu: çıkanı seç → geleni seç (anında) · yedeği sahaya sürükle · sahadaki ikiyi birbirine sürükle = yer değiştir</div>
         <button class="btn btn-green" id="apply-sub" style="width:100%;margin-top:10px;font-size:12.5px;padding:10px" ${G.match.subOut != null && G.match.subIn != null && G.match.subsLeft > 0 ? '' : 'disabled'}>Değişikliği Uygula</button>`;
     } else {
       const sel = G.match.sel != null ? me.lineup[G.match.sel] : null;
@@ -1508,7 +1509,7 @@
         const roles = (ROLES[curPos] || []).map(r => `<div class="role-opt ${sel.role === r ? 'sel' : ''}" data-prole="${r}">${r}${sel.role === r ? ' <span class="mono">✓</span>' : ''}</div>`).join('');
         const tasks = TASKS.map(t => { const col = TASK_COL[t]; const on = (sel.task || defaultTask(curPos)) === t; return `<div class="t ${on ? 'sel' : ''}" data-ptask="${t}" style="${on ? `border:1.5px solid ${col};background:${col}1a;color:${col}` : ''}">${t}</div>`; }).join('');
         rightPanel = `<div class="label" style="font-size:10px;margin-bottom:9px">Seçili Oyuncu · Rol</div>
-          <div class="flexc" style="gap:10px;background:#f4f8fe;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:13px"><div style="width:32px;height:32px;border-radius:9px;background:${me.color};display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(sel)}</div><div><div style="font-family:var(--arch);font-weight:800;font-size:13px">${sel.name}</div><div class="mono" style="font-size:9px;color:#9aa1ac">${curPos} · Güç ${sel.ovr}</div></div></div>
+          <div class="flexc" style="gap:10px;background:#f4f8fe;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:13px"><div style="width:32px;height:32px;border-radius:9px;background:${me.color};display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(sel)}</div><div><div style="font-family:var(--arch);font-weight:800;font-size:13px">${sel.name}</div><div class="mono" style="font-size:9px;color:#9aa1ac">${curPos} · Güç ${sel.ovr} · ${sel.age}y · ${sel.height || '–'}cm</div><div style="font:700 9px 'Hanken Grotesk';color:#7c5cd6;margin-top:1px">${sel.type || ''}</div></div></div>
           <div style="display:grid;gap:6px;margin-bottom:14px">${roles}</div>
           <div class="label" style="font-size:10px;margin-bottom:8px">Sahadaki Görevi</div><div class="task-seg">${tasks}</div>`;
       } else {
@@ -1574,20 +1575,31 @@
     document.querySelectorAll('#match-overlay [data-pin]').forEach(row => {
       row.setAttribute('draggable', 'true');   // morph siler → her render'da yeniden
       if (row._dndBound) return; row._dndBound = true;
-      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', row.dataset.pin); row.classList.add('dragging'); const p = benchList(G.me).find(x => x.id === +row.dataset.pin); if (p) highlightFits(p, '#match-overlay'); });
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'in:' + row.dataset.pin); row.classList.add('dragging'); const p = benchList(G.me).find(x => x.id === +row.dataset.pin); if (p) highlightFits(p, '#match-overlay'); });
       row.addEventListener('dragend', () => { row.classList.remove('dragging'); clearFits(); });
     });
     document.querySelectorAll('#match-overlay [data-pslot]').forEach(el => {
+      el.setAttribute('draggable', 'true');   // saha oyuncusu da sürüklenebilir (kendi aralarında yer değiştir)
       if (el._dndBound) return; el._dndBound = true;
+      el.addEventListener('dragstart', e => { if (el.classList.contains('empty')) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', 'slot:' + el.dataset.pslot); el.classList.add('dragging'); const p = G.me.lineup[+el.dataset.pslot]; if (p) highlightFits(p, '#match-overlay'); });
+      el.addEventListener('dragend', () => { el.classList.remove('dragging'); clearFits(); });
       el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drop-target'); });
       el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
       el.addEventListener('drop', e => {
         e.preventDefault(); el.classList.remove('drop-target'); clearFits();
-        const inId = +e.dataTransfer.getData('text/plain'); if (!inId) return;
+        const src = e.dataTransfer.getData('text/plain'); if (!src) return;
+        const dstI = +el.dataset.pslot;
+        if (src.indexOf('slot:') === 0) {   // saha içi yer değiştirme (forvet↔kanat vb.) — değişiklik hakkı harcamaz
+          const srcI = +src.slice(5); if (srcI === dstI) return;
+          if (!G.me.lineup[srcI] || !G.me.lineup[dstI]) { applySwap({ type: 'slot', i: srcI }, { type: 'slot', i: dstI }); }
+          else { if (G.match.live && G.match.live.swapSlots) G.match.live.swapSlots(0, srcI, dstI); applySwap({ type: 'slot', i: srcI }, { type: 'slot', i: dstI }); }
+          refresh(); renderPanel(); return;
+        }
+        const inId = +src.replace('in:', ''); if (!inId) return;   // yedekten gelen → değişiklik
         if (G.match.subsLeft <= 0) { toast('Değişiklik hakkın kalmadı'); return; }
         const inP = benchList(G.me).find(x => x.id === inId);
         if (inP && isInjured(inP)) { toast(inP.name + ' sakat — sahaya alınamaz'); return; }
-        G.match.subOut = +el.dataset.pslot; G.match.subIn = inId; applySub();
+        G.match.subOut = dstI; G.match.subIn = inId; applySub();
       });
     });
     document.querySelectorAll('[data-prole]').forEach(b => b.onclick = () => { const p = me.lineup[G.match.sel]; if (p) { p.role = b.dataset.prole; renderPanel(); } });
@@ -1678,7 +1690,8 @@
   function flipStats(s) {
     s = s || {};
     return { possA: s.possB, possB: s.possA, shotsA: s.shotsB, shotsB: s.shotsA, sotA: s.sotB, sotB: s.sotA,
-      cornersA: s.cornersB, cornersB: s.cornersA, foulsA: s.foulsB, foulsB: s.foulsA, xgA: s.xgB, xgB: s.xgA };
+      cornersA: s.cornersB, cornersB: s.cornersA, foulsA: s.foulsB, foulsB: s.foulsA,
+      offsidesA: s.offsidesB, offsidesB: s.offsidesA, xgA: s.xgB, xgB: s.xgA };
   }
   function applyGuestFrame(f) {
     const live = G.match && G.match.live; if (!live || !G.match.guest) return;
@@ -1759,6 +1772,7 @@
   function applyGuestResult(m) {
     if (G.match) { G.match.ended = true; if (G.match.live) { try { G.match.live.stop(); } catch (_) {} } }
     const r = m.res; const flip = w => w === 'a' ? 'b' : (w === 'b' ? 'a' : w);
+    if (r.stats) r.stats = flipStats(r.stats);   // guest perspektifi
     G.lastResult = r;
     G.series.matches.push({ a: r.b, b: r.a, winner: flip(r.winner), pen: !!r.penalties, sh: r.shootout ? { a: r.shootout.b, b: r.shootout.a } : null });
     if (flip(r.winner) === 'a') G.series.winsA++; else G.series.winsB++;
@@ -1797,7 +1811,7 @@
     const decided = G.series.winsA >= G.series.winsNeeded || G.series.winsB >= G.series.winsNeeded;
     if (isOnline()) {
       stopHostStream();
-      netSend({ t: 'm-result', res: { a: res.a, b: res.b, winner: res.winner, penalties: !!res.penalties, shootout: res.shootout || null },
+      netSend({ t: 'm-result', res: { a: res.a, b: res.b, winner: res.winner, penalties: !!res.penalties, shootout: res.shootout || null, stats: res.stats || null },
         hostClub: serializeClub(G.me), guestClub: serializeClub(G.opp), devGuest: devOpp, decided });
     }
     setTimeout(() => { if (decided) goResult(); else goBetween(); }, 700);
@@ -1809,7 +1823,7 @@
   function goBetween() {
     if (G.match.live) { try { G.match.live.stop(); } catch (_) {} }
     stopHostStream();
-    if (isOnline()) G.between = { ready: false, oppReady: (G.between && G.between.oppReady) || false };
+    if (isOnline()) G.between = { ready: false, oppReady: (G._betweenReadyFor === G.series.matchNo) };   // sadece BU maç için gelen onayı say (eski tur taşınmaz)
     G.screen = 'between'; render();
   }
   function betweenHTML() {
@@ -1854,8 +1868,33 @@
               <div style="border:1px dashed #cfe0fb;background:#f4f8fe;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#2f63d0;margin-bottom:4px">Not</div><div style="font:500 11.5px 'Hanken Grotesk';color:#5a7099;line-height:1.4">Maçlar peş peşe oynanır — oyuncular tam dinlenmez ama maç sonrası sağlam toparlanır. Oynayanlar daha yorgun, kenardakiler daha taze başlar. Sakat oyuncular iyileşene kadar oynayamaz.</div></div>
             </div>
           </div>
+          ${matchStatsCardHTML()}
           <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><button class="btn btn-green" id="to-duello">Düello'ya Geç →</button></div>
         </div>
+      </div>
+    </div>`;
+  }
+  function matchStatsCardHTML() {
+    const st = G.lastResult && G.lastResult.stats; if (!st) return '';
+    const cA = G.me.color, cB = G.opp.color;
+    const row = (label, va, vb, na, nb) => {
+      const tot = (na + nb) || 1; const wa = Math.round(na / tot * 100);
+      return `<div style="margin-bottom:10px"><div class="between" style="font:700 11.5px 'Hanken Grotesk';margin-bottom:4px"><span>${va}</span><span class="muted" style="font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">${label}</span><span>${vb}</span></div>
+        <div style="height:7px;border-radius:4px;overflow:hidden;background:${cB}"><div style="height:100%;width:${wa}%;background:${cA}"></div></div></div>`;
+    };
+    return `<div class="card" style="overflow:hidden;margin-bottom:20px">
+      <div class="between" style="padding:12px 16px;border-bottom:1px solid var(--line2)">
+        <div style="font-family:var(--arch);font-weight:800;font-size:15px">Maç İstatistikleri</div>
+        <div class="flexc" style="gap:14px;font:700 11px 'Hanken Grotesk'"><span class="flexc" style="gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:${cA}"></span>${G.me.name}</span><span class="flexc" style="gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:${cB}"></span>${G.opp.name}</span></div>
+      </div>
+      <div style="padding:14px 16px">
+        ${row('Topa Sahip Olma', (st.possA || 0) + '%', (st.possB || 0) + '%', st.possA || 0, st.possB || 0)}
+        ${row('Şut', st.shotsA || 0, st.shotsB || 0, st.shotsA || 0, st.shotsB || 0)}
+        ${row('İsabetli Şut', st.sotA || 0, st.sotB || 0, st.sotA || 0, st.sotB || 0)}
+        ${row('xG (Beklenen Gol)', (st.xgA || 0).toFixed(2), (st.xgB || 0).toFixed(2), st.xgA || 0, st.xgB || 0)}
+        ${row('Korner', st.cornersA || 0, st.cornersB || 0, st.cornersA || 0, st.cornersB || 0)}
+        ${row('Ofsayt', st.offsidesA || 0, st.offsidesB || 0, st.offsidesA || 0, st.offsidesB || 0)}
+        ${row('Faul', st.foulsA || 0, st.foulsB || 0, st.foulsA || 0, st.foulsB || 0)}
       </div>
     </div>`;
   }
