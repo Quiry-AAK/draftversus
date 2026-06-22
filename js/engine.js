@@ -100,9 +100,12 @@
           const ax = 56 + fwd * (this.W * 0.45), ay = 44 + (hx / 100) * (this.H - 88);
           const x = team === 0 ? ax : this.W - ax;
           const es = engStats(pl);
-          return { ref: pl, team, pos, line: POS[pos] ? POS[pos].line : 3, fwd, hx: x, hy: ay, x, y: ay, vx: 0, vy: 0,
+          const startStam = (pl && pl.condition != null) ? Math.max(45, pl.condition) : 100;   // maçlar arası taşınan yorgunluk
+          const p = { ref: pl, team, pos, line: POS[pos] ? POS[pos].line : 3, fwd, hx: x, hy: ay, x, y: ay, vx: 0, vy: 0,
             sh: es.sh, pa: es.pa, df: es.df, sp: es.sp, fiz: es.fiz,
-            isGK: pos === 'KL', sur: surOf(pl), stam: 100 };
+            isGK: pos === 'KL', sur: surOf(pl), stam: startStam };
+          if (pl && pl.injuredMatches > 0) this.applyInjuryDebuff(p, true);   // sakat oyuncu zorla oynatıldıysa düşük perf
+          return p;
         });
       };
       this.players = [...make(this.clubA, 0), ...make(this.clubB, 1)];
@@ -119,7 +122,9 @@
           if (nr && p.ref !== nr) {
             // çıkan oyuncu kenara doğru yürüsün (hayalet), giren kenardan sahaya yürüsün
             if (p.ref) this.subWalkers.push({ x: p.x, y: p.y, tx: p.hx + (team === 0 ? -40 : 40), ty: this.H - 4, col: team ? this.colB : this.colA, sur: p.sur, life: 80 });
-            p.ref = nr; const es = engStats(nr); p.sh = es.sh; p.pa = es.pa; p.df = es.df; p.sp = es.sp; p.fiz = es.fiz; p.sur = surOf(nr); p.stam = 100;
+            p.ref = nr; const es = engStats(nr); p.sh = es.sh; p.pa = es.pa; p.df = es.df; p.sp = es.sp; p.fiz = es.fiz; p.sur = surOf(nr);
+            p.stam = (nr.condition != null) ? Math.max(55, nr.condition) : 100; p.injured = false; p.injSev = 0;
+            if (nr.injuredMatches > 0) this.applyInjuryDebuff(p, true);
             p.carded = !!this.cards[nr.id]; p.sentOff = false;   // giren oyuncu taze (kartlıysa işaretli)
             p.x = p.hx; p.y = this.H - 4;
           }
@@ -160,21 +165,28 @@
       });
       let best = base + 6;
       for (let i = 1; i < 11; i++) { const p = this.players[base + i]; if (p && p.ref && p.line >= 2 && p.line <= 3) { best = base + i; break; } }
-      this.owner = best; this.ballMode = 'held'; this.actCD = 14; this._lastPass = null;
-      const dir = team === 0 ? 1 : -1; const o = this.players[best];
-      o.x = this.W / 2; o.y = this.H / 2;   // topu kullanan tek oyuncu santrada
-      const mate = this.players[base + (best - base === 6 ? 7 : 6)];   // bir arkadaşı az geride
-      if (mate && mate.ref) { mate.x = this.W / 2 - dir * 34; mate.y = this.H / 2 + 22; }
-      this.ball.x = o.x; this.ball.y = o.y; this.kickoffFreeze = 26;   // dizilişte kısa bekleme
+      this.owner = best; this.ballMode = 'held'; this.actCD = 999; this._lastPass = null;
+      const o = this.players[best];
+      o.x = this.W / 2; o.y = this.H / 2;   // YALNIZCA topu kullanan oyuncu santrada; diğerleri kendi düzeninde kalır
+      this.ball.x = o.x; this.ball.y = o.y; this.kickoffFreeze = 26;   // topun başında kısa bekleme
+      this._kickoffBackPass = true;   // freeze bitince geriye paslayıp oyun başlar
       if (!silent) this.say('Oyun yeniden başladı — ' + this.clubName(team) + ' topla.', 'info');
     }
     start() {
       if (this.running) return; this.running = true;
-      const loop = () => { if (!this.running) return; this.step(); this.draw(); this._raf = requestAnimationFrame(loop); };
+      const loop = () => { if (!this.running) return; if (!this._bgActive()) { this.step(); this.draw(); } this._raf = requestAnimationFrame(loop); };
       loop();
       this._iv = setInterval(() => { this.onUpdate({ clock: Math.floor(this.clock), clockStr: this.clockStr(), a: this.a, b: this.b, stats: this.computeStats(), momentum: this.momentum }); }, 220);
+      // sekme arka plandayken (alt-tab) tarayıcı rAF'ı durdurur → maç donmasın diye zamanlayıcıyla ilerlet
+      this._lastBg = Date.now();
+      this._bg = setInterval(() => {
+        if (!this.running || !this._bgActive()) { this._lastBg = Date.now(); return; }
+        const now = Date.now(); let n = Math.min(90, Math.round((now - this._lastBg) / 16)); this._lastBg = now;
+        while (n-- > 0) this.step();
+      }, 40);
     }
-    stop() { this.running = false; if (this._raf) cancelAnimationFrame(this._raf); if (this._iv) clearInterval(this._iv); }
+    _bgActive() { return typeof document !== 'undefined' && document.hidden; }
+    stop() { this.running = false; if (this._raf) cancelAnimationFrame(this._raf); if (this._iv) clearInterval(this._iv); if (this._bg) clearInterval(this._bg); }
     setSpeed(v) { this.speed = v; }
     refreshStrength() { this.sA = teamStrength(this.clubA); this.sB = teamStrength(this.clubB); this.computeTac(); this.reconcilePlayers(); }
     computeStats() {
@@ -197,8 +209,17 @@
       // başlama vuruşu donması: oyuncular dizilişte beklesin (santrada tek topçu görünsün)
       if (this.kickoffFreeze > 0) {
         this.kickoffFreeze -= sp; const ow = this.owner != null ? this.players[this.owner] : null;
-        if (ow) { this.ball.x = ow.x + (ow.team === 0 ? 12 : -12); this.ball.y = ow.y; }
+        if (ow) { this.ball.x = ow.x; this.ball.y = ow.y; }   // top santrada, topçunun ayağında
         return;
+      }
+      // santra geri pası: topçu freeze bitince kendi yarısındaki en yakın arkadaşına geriye paslar → oyun başlar
+      if (this._kickoffBackPass && this.ballMode === 'held' && this.owner != null) {
+        this._kickoffBackPass = false;
+        const o = this.players[this.owner]; const dir = o.team === 0 ? 1 : -1;
+        let best = null, bd = 1e9;
+        for (let k = 0; k < 22; k++) { const m = this.players[k]; if (!m || !m.ref || m.team !== o.team || m === o || m.isGK || m.sentOff) continue; if ((m.x - o.x) * dir < -6) { const d = dist(m, o); if (d < bd) { bd = d; best = m; } } }
+        if (best) { this.passTo(o, best, 0); this.say('Santra yapıldı — top geriye, oyun başlıyor.', 'info'); }
+        else { this.actCD = 8; }   // geride kimse yoksa normal oyuna dön
       }
       this.updateSubWalkers(sp);
       const owner = this.owner != null ? this.players[this.owner] : null;
@@ -346,6 +367,8 @@
 
       // gol tekrarı için canlı oyunun son anlarını kaydet
       if (!frozen) this.recordFrame();
+      // seyrek kendiliğinden (kas) sakatlığı — yorgun oyuncu daha riskli
+      if (!frozen && Math.random() < 0.00006) { const vi = randi(0, 21); const vp = this.players[vi]; this.maybeInjure(vp, vp && vp.stam < 45 ? 1 : 0.55); }
 
       // momentum (baskı) — sahiplik + topun ilerlemişliği
       if (!frozen) {
@@ -832,11 +855,34 @@
       this.clock += 0.012 * sp;   // penaltı sırasında saat yavaş
       if (this.clock >= 90 && !this.ended && this.ballMode !== 'penalty') this.finish();
     }
+    applyInjuryDebuff(p, carried) {
+      // sakat oyuncu sahada: belirgin düşük performans (menajeri değişikliğe iter)
+      p.injured = true; const f = carried ? 0.72 : 0.6;
+      p.sh *= f; p.pa *= f; p.df *= f; p.sp *= f * 0.85; p.fiz *= f;
+      if (!carried) p.stam = Math.min(p.stam, 42);
+    }
+    maybeInjure(p, base) {
+      if (!p || !p.ref || p.injured || p.sentOff) return;
+      if (p.isGK && Math.random() < 0.6) return;   // kaleci nadir sakatlanır
+      if (Math.random() > (base == null ? 0.06 : base)) return;
+      const r = Math.random();
+      const sev = r < 0.6 ? 1 : r < 0.88 ? 2 : 3;   // 1 hafif (maç kaçırmaz), 2 orta (1 maç), 3 ağır (2 maç)
+      this.applyInjuryDebuff(p, false); p.injSev = sev;
+      p.ref.injuredMatches = sev >= 3 ? 2 : sev >= 2 ? 1 : 0;   // bu maçtan SONRA kaçırılacak maç sayısı
+      p.ref.justInjured = true; p.ref._inMatchInjured = true;   // YZ/menajer değişiklik için işaret
+      const t = Math.floor(this.clock) + "'";
+      const sevTxt = sev >= 3 ? 'AĞIR sakatlık' : sev >= 2 ? 'sakatlık' : 'hafif sakatlık';
+      const ev = { t, type: 'inj', txt: `➕ ${p.ref.name} — ${sevTxt} · ${this.clubName(p.team)}` };
+      this.events.unshift(ev); this.onEvent(ev, { a: this.a, b: this.b });
+      this.say(p.ref.name + ' sakatlandı! ' + (sev >= 2 ? 'Durumu ciddi — menajer değişiklik yapmalı, yoksa düşük performansla devam.' : 'Etkilendi, düşük performansla oynuyor.'), 'inj');
+      this.flash = { txt: 'SAKATLIK', col: '#ff8da1' }; this._flashUntil = this.t + 46;
+    }
     foul(byIdx) {
       const fouler = this.players[byIdx]; const team = fouler.team;
       if (team === 0) this.stats.foulsA++; else this.stats.foulsB++;
       // faul savunan takımın ceza sahasında mı? → penaltı
       const victim = this.owner != null ? this.players[this.owner] : null;
+      if (victim) this.maybeInjure(victim, 0.10);   // sert faulde sakatlık riski
       if (victim && this.inPenaltyBox(victim, team)) return this.setPenalty(1 - team);
       const t = Math.floor(this.clock) + "'";
       const already = (this.cards[fouler.ref.id] || 0) >= 1;
@@ -884,6 +930,8 @@
     }
     finish() {
       if (this.ended) return; this.ended = true;
+      // sahadaki oyuncuların kalan kondisyonunu kaydet (maçlar arası taşınır)
+      this.players.forEach(p => { if (p.ref) p.ref.condition = Math.round(p.stam); });
       this.onUpdate({ clock: 90, a: this.a, b: this.b, stats: this.computeStats(), momentum: this.momentum });
       this.say('Maç bitti! ' + this.clubA.name + ' ' + this.a + '-' + this.b + ' ' + this.clubB.name + '.', 'end');
       this._endResult = this.result();
@@ -1011,6 +1059,8 @@
         ctx.lineWidth = isOwner ? 3 : 2.4; ctx.strokeStyle = isOwner ? '#fff' : 'rgba(255,255,255,.92)'; ctx.stroke();
         if (isOwner) { ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, 7); ctx.lineWidth = 2; ctx.strokeStyle = '#ffe27a'; ctx.stroke(); }
         if (p.stam < 40) { ctx.beginPath(); ctx.arc(p.x + 9, p.y - 9, 2.4, 0, 7); ctx.fillStyle = '#e5484d'; ctx.fill(); }
+        // sakatlık: pembe artı işareti
+        if (p.injured) { ctx.fillStyle = '#ff5d7d'; ctx.fillRect(p.x + 6.5, p.y - 11.5, 2.2, 6.5); ctx.fillRect(p.x + 4.4, p.y - 9.4, 6.5, 2.2); }
         // sarı kart: küçük kart işareti
         if (p.carded) { ctx.fillStyle = '#facc15'; ctx.fillRect(p.x - 12.5, p.y - 13, 4.5, 6.5); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 0.8; ctx.strokeRect(p.x - 12.5, p.y - 13, 4.5, 6.5); }
         ctx.font = '700 11px Geist Mono, monospace';
@@ -1084,6 +1134,12 @@
 
     club.squad.forEach(p => {
       const played = starterIds.has(p.id);
+      // ---- maçlar arası kondisyon: oynayan yorulur ama sağlam recover; kenardakiler tam dinlenir ----
+      const cond = p.condition != null ? p.condition : 100;
+      p.condition = Math.min(100, Math.round(cond + (played ? 34 : 60)));
+      // ---- sakatlık sayacı: bu maç sakatlananı düşürme; oturan/sağlamların sayacı azalır ----
+      if (p.injuredMatches > 0) { if (p.justInjured) p.justInjured = false; else p.injuredMatches = Math.max(0, p.injuredMatches - 1); }
+      p._inMatchInjured = false;
       const gap = p.pot - p.ovr;
       let delta = 0; const reasons = [];
       const youthMod = p.age <= 18 ? 1.25 : p.age <= 21 ? 1.05 : p.age <= 24 ? 0.7 : p.age <= 27 ? 0.4 : p.age <= 29 ? 0.2 : 0;
@@ -1148,11 +1204,19 @@
     },
     subDecision(club) {
       const slots = FORMATIONS[club.formation] || FORMATIONS['4-3-3'];
+      const healthyBench = b => b && !b.injuredMatches && !b._inMatchInjured;
+      // önce sahadaki sakat oyuncuyu değiştir
+      const injI = club.lineup.findIndex(p => p && p._inMatchInjured);
+      if (injI >= 0) {
+        const pos = slots[injI][0]; let best = null, bv = -1;
+        club.bench.forEach(b => { if (!healthyBench(b)) return; const v = effOvr(b, pos); if (v > bv) { bv = v; best = b; } });
+        if (best) return { outIndex: injI, inPlayer: best };
+      }
       let worstI = -1, worstVal = 1e9;
       club.lineup.forEach((p, i) => { if (!p) return; const v = effOvr(p, slots[i][0]); if (v < worstVal) { worstVal = v; worstI = i; } });
       if (worstI < 0) return null;
       const pos = slots[worstI][0]; let best = null, bv = -1;
-      club.bench.forEach(b => { if (!b) return; const v = effOvr(b, pos); if (v > bv) { bv = v; best = b; } });
+      club.bench.forEach(b => { if (!healthyBench(b)) return; const v = effOvr(b, pos); if (v > bv) { bv = v; best = b; } });
       if (best && bv > effOvr(club.lineup[worstI], pos) + 2) return { outIndex: worstI, inPlayer: best };
       return null;
     },

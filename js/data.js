@@ -245,6 +245,7 @@ function makePlayer(primary, opts = {}) {
     id: _uid++,
     name: opts.name || (pick(FIRST_INITIALS) + '. ' + pick(SURNAMES)),
     positions, pos: primary, type: arch.n, age, ovr, pot, stats, fatigue: 0,
+    condition: 100, injuredMatches: 0,   // maçlar arası yorgunluk (0-100) + sakatlıkla kaçırılacak maç sayısı
     role: ROLES[primary] ? ROLES[primary][0] : '', task: defaultTask(primary),
   };
 }

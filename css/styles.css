@@ -349,6 +349,27 @@ button { font-family: inherit; }
 .between { display: flex; align-items: center; justify-content: space-between; }
 .wrap-frame { background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
 
+/* online draft: rakip seçerken aday alanı (boş yerine net gösterge) */
+.cand-wait { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 46px 24px; text-align: center; border: 1.5px dashed var(--line2); border-radius: 16px; background: linear-gradient(180deg,#fbfcfd,#fff); }
+.cand-wait .cw-spin { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #e6e8ec; border-top-color: var(--green); animation: spin 0.9s linear infinite; }
+.cand-wait .cw-title { font: 800 16px var(--arch); color: var(--ink); }
+.cand-wait .cw-sub { font: 500 12.5px 'Hanken Grotesk'; color: var(--muted); max-width: 360px; line-height: 1.5; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* duello yönerge şeridi + ipuçları */
+.duello-howto { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 12px 18px; background: #14181f; border-radius: 12px; margin-bottom: 12px; }
+.duello-howto .hw { display: inline-flex; align-items: center; gap: 8px; font: 700 12.5px 'Hanken Grotesk'; color: #fff; }
+.duello-howto .hwn { width: 19px; height: 19px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: 800 11px var(--mono); color: #fff; }
+.duello-hint { font: 600 12px 'Hanken Grotesk'; padding: 8px 11px; border-radius: 9px; margin-bottom: 14px; }
+.duello-hint.red { background: #fdeced; color: #c43d42; }
+.duello-hint.green { background: #e7f8f0; color: #0f8f5b; }
+
+/* sakat oyuncu jetonları */
+.sub-tok.inj { opacity: .75; }
+.sub-tok.inj .dot { filter: grayscale(.5); box-shadow: 0 0 0 2px #f3c6c8; }
+.btok.inj .dot { filter: grayscale(.4); border-color: #e5484d; }
+
 @media (max-width: 1100px) {
   .draft-grid { grid-template-columns: 1fr; }
   .tactics-grid { grid-template-columns: 1fr; }

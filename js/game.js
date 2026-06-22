@@ -56,6 +56,7 @@
       focus: { Pres: 0, Tempo: 0, Genişlik: 0, 'Defans Hattı': 0, Yaratıcılık: 0, Fizik: 0 } };
   }
   function benchList(club) { return club.bench.filter(Boolean); }
+  function isInjured(p) { return !!(p && p.injuredMatches > 0); }   // sakatlık nedeniyle bu maçı kaçırması gereken oyuncu
   function teamOvr(club) { return teamStrength(club).teamOvr; }
   function toast(msg) {
     document.querySelectorAll('.toast').forEach(t => t.remove());
@@ -383,7 +384,7 @@
       case 'd-formation': if (G.opp) G.opp.formation = m.f; if (G.screen === 'draft') render(); break;
       case 'd-open-pick': {
         const opener = G.draftPool.find(p => p.id === m.id);
-        if (opener) { removeFromPool(opener); assignDraft(G.opp, m.slot, opener); }
+        if (opener) { removeFromPool(opener); assignDraft(G.opp, m.slot, opener); toast('Rakip aldı: ' + opener.name + (m.pos && m.pos !== 'ANY' && POS[m.pos] ? ' · ' + POS[m.pos].name : '')); }
         d.takenByOpener = opener || null; d.pos = m.pos;
         d.cands = m.cands.filter(id => id !== m.id).map(id => G.draftPool.find(p => p.id === id)).filter(Boolean);
         d.phase = 'take'; d.waiting = false; d.activeSlot = null; render();
@@ -391,7 +392,7 @@
       }
       case 'd-take': {
         const pl = G.draftPool.find(p => p.id === m.id);
-        if (pl) { removeFromPool(pl); assignDraft(G.opp, m.slot, pl); }
+        if (pl) { removeFromPool(pl); assignDraft(G.opp, m.slot, pl); toast('Rakip aldı: ' + pl.name); }
         d.round++; advanceDraft();
         break;
       }
@@ -504,7 +505,8 @@
     let pool = G.draftPool.slice();
     if (pos === 'ANY') {
       // yedek: dizilişe uygun, farklı hatlardan dengeli adaylar (sırf forvet değil)
-      const groups = [['KL'], ['STP', 'SĞB', 'SLB'], ['DOS', 'MOS', 'OOS'], ['SĞK', 'SLK', 'SĞA', 'SLA', 'SF']];
+      // STP'yi beklerden ayır → yedek adayları arasında her zaman bir stoper de çıksın
+      const groups = [['KL'], ['STP'], ['SĞB', 'SLB'], ['DOS', 'MOS', 'OOS'], ['SĞK', 'SLK', 'SĞA', 'SLA', 'SF']];
       const res = [];
       groups.forEach(g => { const best = pool.filter(p => !res.includes(p) && p.positions.some(pp => g.includes(pp))).sort((a, b) => b.ovr - a.ovr)[0]; if (best) res.push(best); });
       pool.sort((a, b) => b.ovr - a.ovr).forEach(p => { if (res.length < n && !res.includes(p)) res.push(p); });
@@ -662,7 +664,7 @@
               <span class="flexc" style="gap:4px"><span class="lg" style="border:1.5px solid #c2c7ce;background:transparent"></span>oynamaz</span>
             </div>
           </div>
-          <div class="cand-grid">${cands}</div>
+          <div class="cand-grid">${waiting ? `<div class="cand-wait"><div class="cw-spin"></div><div class="cw-title">🔒 Rakip seçiyor…</div><div class="cw-sub">${d.opener === 'me' ? 'Açtığın mevkide kalan adaylardan birini alıyor — birazdan sıra sana dönecek.' : 'Bir mevki açıp ilk seçimini yapıyor. Ardından kalan adaylardan sen seçeceksin.'}</div></div>` : cands}</div>
         </div>
       </div>
     </div>`;
@@ -801,17 +803,22 @@
     const giveP = stealP ? weakestForPos(G.me, stealP.pos, null) : null;   // otomatik verilecek (en zayıf, aynı mevki)
     const ready = stealP && protP;
     return `<div class="screen">
-      ${head('03', 'Çalma / Koruma Düellosu · Tur ' + tur, 'Rakipten bir oyuncu çal — karşılığında o mevkiyi oynayabilen en zayıf oyuncun otomatik gider. Ayrıca kendi yıldızını korumaya al. Rakip korursa çalman boşa gider.')}
+      ${head('03', 'Çalma / Koruma Düellosu · Tur ' + tur, 'Gizli düello: aynı anda BİR rakip oyuncu çal + kendi BİR oyuncunu koru. İkiniz de kilitleyince sonuç açılır.')}
+      <div class="duello-howto">
+        <span class="hw"><span class="hwn" style="background:#e5484d">1</span> Solda rakipten almak istediğin oyuncuya dokun</span>
+        <span class="hw"><span class="hwn" style="background:#13a76a">2</span> Sağda kendi korumak istediğin yıldıza dokun</span>
+        <span class="hw"><span class="hwn" style="background:#14181f">3</span> Aşağıdan "Seçimi Kilitle"ye bas</span>
+      </div>
       <div class="duello-grid">
         <div class="duello-side bd">
-          <div class="flexc" style="gap:9px;margin-bottom:5px"><div style="width:26px;height:26px;border-radius:7px;background:#fdeced;display:flex;align-items:center;justify-content:center;color:#e5484d;font-weight:900;font-family:var(--arch)">↯</div><div style="font-family:var(--arch);font-weight:800;font-size:16px;color:#e5484d">ÇAL — ${G.opp.name}</div></div>
-          <div class="muted" style="font-size:12px;margin-bottom:14px">Almak istediğin oyuncuya dokun.</div>
+          <div class="flexc" style="gap:9px;margin-bottom:5px"><div style="width:26px;height:26px;border-radius:7px;background:#fdeced;display:flex;align-items:center;justify-content:center;color:#e5484d;font-weight:900;font-family:var(--arch)">↯</div><div style="font-family:var(--arch);font-weight:800;font-size:16px;color:#e5484d">1 · ÇAL — ${G.opp.name}</div></div>
+          <div class="duello-hint red">👆 Almak istediğin rakip oyuncuya dokun. ${du.mySteal ? '<b>Seçildi ✓</b>' : 'Henüz seçmedin.'}</div>
           <div class="pitch" style="height:360px">${PITCH_LINES}${opp.tokens}</div>
           <div class="flexc" style="margin-top:14px;gap:12px"><div class="label" style="font-size:9.5px">Yedekler</div><div style="flex:1;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">${opp.bench}</div></div>
         </div>
         <div class="duello-side">
-          <div class="flexc" style="gap:9px;margin-bottom:5px"><div style="width:26px;height:26px;border-radius:7px;background:#e7f8f0;display:flex;align-items:center;justify-content:center;color:#13a76a;font-weight:900;font-family:var(--arch)">🛡</div><div style="font-family:var(--arch);font-weight:800;font-size:16px;color:#13a76a">KORU — ${G.me.name}</div></div>
-          <div class="muted" style="font-size:12px;margin-bottom:14px">Korunacak yıldızını seç — rakip onu çalamaz.</div>
+          <div class="flexc" style="gap:9px;margin-bottom:5px"><div style="width:26px;height:26px;border-radius:7px;background:#e7f8f0;display:flex;align-items:center;justify-content:center;color:#13a76a;font-weight:900;font-family:var(--arch)">🛡</div><div style="font-family:var(--arch);font-weight:800;font-size:16px;color:#13a76a">2 · KORU — ${G.me.name}</div></div>
+          <div class="duello-hint green">🛡 Korumak istediğin kendi yıldızına dokun — rakip onu çalamaz. ${du.myProtect ? '<b>Seçildi ✓</b>' : 'Henüz seçmedin.'}</div>
           <div class="pitch" style="height:360px">${PITCH_LINES}${mine.tokens}</div>
           <div class="flexc" style="margin-top:14px;gap:12px"><div class="label" style="font-size:9.5px">Yedekler</div><div style="flex:1;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">${mine.bench}</div></div>
         </div>
@@ -959,6 +966,7 @@
      4 · KADRO & TAKTİK
      ============================================================ */
   function goTactics() {
+    benchInjured(G.me);   // sakat oyuncuları ilk 11'den yedeğe al (oynayamazlar)
     // çalma sonrası boş kalan ilk 11 slotlarını yedekten doldurmaya çalışma (kullanıcı düzenleyebilir)
     fillHolesFromBench(G.me);
     if (!isOnline()) aiSetupLineup(G.opp);   // online'da rakip insandır; dizilişi "Hazır"da gelir
@@ -967,6 +975,14 @@
     G.screen = 'tactics';
     render();
   }
+  /* Sakat oyuncuları (injuredMatches>0) ilk 11'den yedeğe taşı — bu maçı kaçırırlar */
+  function benchInjured(club) {
+    club.lineup.forEach((p, i) => {
+      if (!p || !isInjured(p)) return;
+      club.lineup[i] = null;
+      const e = club.bench.indexOf(null); if (e >= 0) club.bench[e] = p; else club.bench.push(p);
+    });
+  }
   function fillHolesFromBench(club) {
     const slots = FORMATIONS[club.formation];
     club.lineup.forEach((p, i) => {
@@ -974,9 +990,11 @@
       const pos = slots[i][0];
       const bench = benchList(club);
       if (!bench.length) return;
-      // en uygun yedek
-      let best = bench[0], bv = -1;
-      bench.forEach(b => { const v = effOvr(b, pos); if (v > bv) { bv = v; best = b; } });
+      // önce SAĞLAM yedeklerden en uygunu; hiç sağlam yoksa son çare sakat oyuncu (11 tamamlansın)
+      const healthy = bench.filter(b => !isInjured(b));
+      const pool = healthy.length ? healthy : bench;
+      let best = pool[0], bv = -1;
+      pool.forEach(b => { const v = effOvr(b, pos); if (v > bv) { bv = v; best = b; } });
       const bi = club.bench.indexOf(best); if (bi >= 0) club.bench[bi] = null;
       club.lineup[i] = best; best.task = defaultTask(pos); best.role = (ROLES[pos] || [''])[0];
     });
@@ -985,12 +1003,14 @@
     AI.chooseTactics(club);
     const slots = FORMATIONS[club.formation];
     const pool = club.squad.slice();
+    const healthy = pool.filter(p => !isInjured(p));
     const lineup = Array(11).fill(null);
-    // her slota en uygun oyuncuyu greedy ata
+    // her slota en uygun (sağlam) oyuncuyu greedy ata; yetmezse sakatlara düş
     slots.forEach((s, i) => {
       const pos = s[0];
+      const avail = (healthy.filter(p => !lineup.includes(p)).length ? healthy : pool);
       let best = null, bv = -1;
-      pool.forEach(p => { if (lineup.includes(p)) return; const v = effOvr(p, pos); if (v > bv) { bv = v; best = p; } });
+      avail.forEach(p => { if (lineup.includes(p)) return; const v = effOvr(p, pos); if (v > bv) { bv = v; best = p; } });
       if (best) { lineup[i] = best; best.task = defaultTask(pos); }
     });
     club.lineup = lineup;
@@ -1008,13 +1028,13 @@
       const dotBg = sp === 'KL' ? '#d9a017' : me.color;
       const fl = fitLevel(p, sp);
       const fitRing = fl === 'high' ? '' : fl === 'mid' ? 'outline:2px solid #d9a017;outline-offset:2px;' : 'outline:2px solid #e5484d;outline-offset:2px;';
-      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%">
+      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%" title="${p.name} · ${p.age} yaş · Güç ${p.ovr} · ${POS[sp].name}">
         <div class="dot" style="background:${dotBg};${fitRing}">${shortOf(p)}<span class="ovr">${p.ovr}</span><span class="task" style="background:${tc}"></span></div>
         <div class="nm">${p.name}</div><span class="tasklbl" style="background:${tc}">${task}</span></div>`;
     }).join('');
     const bench = benchList(me).map((p, i) => {
-      const isSel = sel && sel.bench && sel.idx === i;
-      return `<div class="btok ${isSel ? 'sel' : ''}" data-tbench="${i}"><div class="dot">${shortOf(p)}<span class="ovr">${p.ovr}</span></div><div class="pos">${p.pos}</div></div>`;
+      const isSel = sel && sel.bench && sel.idx === i; const inj = isInjured(p);
+      return `<div class="btok ${isSel ? 'sel' : ''} ${inj ? 'inj' : ''}" data-tbench="${i}" title="${p.name} · ${p.age} yaş · Güç ${p.ovr}${inj ? ' · SAKAT (oynayamaz)' : ''}"><div class="dot">${shortOf(p)}<span class="ovr">${p.ovr}</span></div><div class="pos">${inj ? '➕ sakat' : p.pos}</div></div>`;
     }).join('');
     const fmts = FORMATION_NAMES.map(n => `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}" data-formation="${n}">${n}</div>`).join('');
     const phils = PHILOSOPHIES.map(n => `<div class="opt-pill ${me.philosophy === n ? 'sel' : ''}" data-phil="${n}">${n}</div>`).join('');
@@ -1143,6 +1163,8 @@
     const me = G.me, benchArr = benchList(me);
     const getP = sp => sp.type === 'slot' ? me.lineup[sp.i] : benchArr[sp.i];
     const A = getP(a), B = getP(b);
+    // sakat oyuncu ilk 11 slotuna konamaz
+    if ((a.type === 'slot' && isInjured(B)) || (b.type === 'slot' && isInjured(A))) { toast('Sakat oyuncu ilk 11\'e alınamaz'); return; }
     if (a.type === 'slot' && b.type === 'slot') {
       me.lineup[a.i] = B || null; me.lineup[b.i] = A || null; fixTask(a.i); fixTask(b.i);
     } else if (a.type === 'bench' && b.type === 'bench') {
@@ -1203,18 +1225,27 @@
     const specStr = el => el.dataset.tslot != null ? ('s' + el.dataset.tslot) : ('b' + el.dataset.tbench);
     const parse = s => s[0] === 's' ? { type: 'slot', i: +s.slice(1) } : { type: 'bench', i: +s.slice(1) };
     document.querySelectorAll(selector).forEach(el => {
-      if (!el.classList.contains('empty')) {
-        el.setAttribute('draggable', 'true');
-        el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', specStr(el)); e.dataTransfer.effectAllowed = 'move'; el.classList.add('dragging'); if (opts && opts.onStart) opts.onStart(parse(specStr(el))); });
-        el.addEventListener('dragend', () => { el.classList.remove('dragging'); if (opts && opts.onStop) opts.onStop(); });
-      }
+      // güncel closure'ları düğümde sakla
+      el._onDrop = onDrop; el._dndOpts = opts;
+      // ÖNEMLİ: morph her render'da new HTML'de olmayan `draggable` attribute'unu siler → HER render'da yeniden uygula
+      // (yalnızca ilk sürükleme çalışıp sonra bozulmasının kök nedeni buydu).
+      el.setAttribute('draggable', 'true');
+      // listener'lar yalnızca bir kez (morph node'u yeniden kullandığı için birikmesinler)
+      if (el._dndBound) return;
+      el._dndBound = true;
+      el.addEventListener('dragstart', e => {
+        if (el.classList.contains('empty')) { e.preventDefault(); return; }   // boş slot sürüklenemez (doluyken çalışır)
+        e.dataTransfer.setData('text/plain', specStr(el)); e.dataTransfer.effectAllowed = 'move'; el.classList.add('dragging');
+        if (el._dndOpts && el._dndOpts.onStart) el._dndOpts.onStart(parse(specStr(el)));
+      });
+      el.addEventListener('dragend', () => { el.classList.remove('dragging'); if (el._dndOpts && el._dndOpts.onStop) el._dndOpts.onStop(); });
       el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drop-target'); });
       el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
       el.addEventListener('drop', e => {
         e.preventDefault(); el.classList.remove('drop-target');
         const src = e.dataTransfer.getData('text/plain'); if (!src) return;
         const dst = specStr(el); if (src === dst) return;
-        onDrop(parse(src), parse(dst));
+        el._onDrop(parse(src), parse(dst));
       });
     });
   }
@@ -1313,8 +1344,8 @@
   }
   function pushCommentary(text, type) {
     const box = document.getElementById('commentary'); if (!box) return;
-    const cls = { goal: 'cm-goal', shot: 'cm-shot', save: 'cm-save', foul: 'cm-foul', card: 'cm-card', attack: 'cm-attack', turn: 'cm-turn', half: 'cm-half', set: 'cm-set', end: 'cm-end' }[type] || 'cm-info';
-    const icon = { goal: '🥅', shot: '🎯', save: '🧤', foul: '⚠️', card: '🟨', attack: '⚡', turn: '🔄', half: '⏸', set: '🚩', end: '🏁' }[type] || '📣';
+    const cls = { goal: 'cm-goal', shot: 'cm-shot', save: 'cm-save', foul: 'cm-foul', card: 'cm-card', attack: 'cm-attack', turn: 'cm-turn', half: 'cm-half', set: 'cm-set', end: 'cm-end', inj: 'cm-foul' }[type] || 'cm-info';
+    const icon = { goal: '🥅', shot: '🎯', save: '🧤', foul: '⚠️', card: '🟨', attack: '⚡', turn: '🔄', half: '⏸', set: '🚩', end: '🏁', inj: '➕' }[type] || '📣';
     box.insertAdjacentHTML('afterbegin', `<div class="cm-line ${cls}">${icon} ${text}</div>`);
     while (box.children.length > 6) box.removeChild(box.lastChild);
   }
@@ -1325,8 +1356,8 @@
     if (knob) knob.style.left = pct + '%';
   }
   function evRowHTML(ev) {
-    const k = ev.type === 'goal' ? '#19c37d' : ev.type === 'sub' ? '#3b6fe0' : '#eab308';
-    const icon = ev.type === 'goal' ? '⚽ ' : ev.type === 'sub' ? '⇄ ' : '';
+    const k = ev.type === 'goal' ? '#19c37d' : ev.type === 'sub' ? '#3b6fe0' : ev.type === 'inj' ? '#ff5d7d' : '#eab308';
+    const icon = ev.type === 'goal' ? '⚽ ' : ev.type === 'sub' ? '⇄ ' : ev.type === 'inj' ? '➕ ' : '';
     return `<div class="ev"><span class="t">${ev.t}</span><span class="k" style="background:${k}"></span><span class="x">${icon}${ev.txt}</span></div>`;
   }
   function bindMatch() {
@@ -1336,7 +1367,7 @@
     const live = new LiveMatch(cv, G.me, G.opp, {
       mustWin: true,   // eleme maçı: beraberlikte uzatma + penaltı atışları
       onUpdate: (u) => {
-        G.match.stats = u.stats;
+        G.match.stats = u.stats; G.match.curClock = u.clock;
         const a = document.getElementById('sb-a'), b = document.getElementById('sb-b'), c = document.getElementById('sb-clock');
         if (a) a.textContent = u.a; if (b) b.textContent = u.b; if (c) c.textContent = u.clockStr || (u.clock + "'");
         const st = document.getElementById('st-box'); if (st) st.innerHTML = statBars(u.stats);
@@ -1344,6 +1375,8 @@
         if (online) netSend({ t: 'm-update', a: u.a, b: u.b, clock: u.clock, clockStr: u.clockStr, stats: u.stats, momentum: u.momentum });
         // YZ değişikliği ~ 58-72' (yalnızca AI modunda)
         if (!online && !G.match.aiSubbed && u.clock >= 58 + randi(0, 14)) { G.match.aiSubbed = true; aiInMatchSub(); }
+        // YZ sakatlanan oyuncusunu hemen değiştirmeye çalışır
+        if (!online && G.opp.lineup.some(p => p && p._inMatchInjured)) aiInMatchSub();
       },
       onEvent: (ev) => {
         const box = document.getElementById('ev-box');
@@ -1380,12 +1413,12 @@
   /* ----- maç içi panel ----- */
   function openPanel(mode) {
     G.match.panelOpen = true; G.match.panelMode = mode;
-    if (G.match.live) G.match.live.stop();
+    if (G.match.live && !isOnline()) G.match.live.stop();   // online: rakip beklemesin, maç akmaya devam etsin
     renderPanel();
   }
   /* Rakip dizilişini görüntüle — gerçek formasyon + oyuncular, taktikler GİZLİ */
   function openOppView() {
-    if (G.match.live) G.match.live.stop();
+    if (G.match.live && !isOnline()) G.match.live.stop();
     const opp = G.opp, slots = FORMATIONS[opp.formation];
     const cards = opp.lineup ? opp.lineup.map((p, i) => {
       if (!p) return '';
@@ -1403,7 +1436,7 @@
       </div>
       <div class="panel-foot"><div class="muted" style="font-size:11px">Casus raporu 🔍</div><button class="btn btn-green" id="oppview-ok" style="padding:10px 22px">Kapat</button></div>
     </div></div>`;
-    const close = () => { const ov = document.getElementById('match-overlay'); if (ov) ov.innerHTML = ''; if (G.match.live && !G.match.live.ended) G.match.live.start(); };
+    const close = () => { const ov = document.getElementById('match-overlay'); if (ov) ov.innerHTML = ''; if (G.match.live && !G.match.live.ended && !isOnline()) G.match.live.start(); };
     document.getElementById('oppview-close').onclick = close;
     document.getElementById('oppview-ok').onclick = close;
   }
@@ -1422,7 +1455,7 @@
   function closePanel() {
     G.match.panelOpen = false;
     const o = document.getElementById('match-overlay'); if (o) o.innerHTML = '';
-    if (G.match.live && !G.match.live.ended) G.match.live.start();
+    if (G.match.live && !G.match.live.ended && !isOnline()) G.match.live.start();   // online'da motor zaten durmadı
   }
   function renderPanel() {
     const o = document.getElementById('match-overlay'); if (!o) return;
@@ -1454,11 +1487,12 @@
         const pos = out != null ? FORMATIONS[me.formation][G.match.subOut][0] : b.pos;
         const f = fitLevel(b, pos); const fm = FIT_META[f];
         const on = G.match.subIn === b.id;
+        const inj = isInjured(b);
         // top (jeton) şeklinde yedek oyuncu
-        return `<div class="sub-tok ${on ? 'on' : ''}" data-pin="${b.id}" title="${b.name} · ${fm.label} uyum">
+        return `<div class="sub-tok ${on ? 'on' : ''} ${inj ? 'inj' : ''}" data-pin="${b.id}" title="${b.name} · ${b.age} yaş · ${inj ? 'SAKAT (oynayamaz)' : fm.label + ' uyum'}">
           <div class="dot" style="background:${b.pos === 'KL' ? '#d9a017' : me.color};${on ? 'box-shadow:0 0 0 3px #19c37d,0 4px 10px -3px rgba(0,0,0,.45)' : ''}">${shortOf(b)}<span class="ovr">${b.ovr}</span></div>
           <div class="bn">${b.name.split('. ')[1] || b.name}</div>
-          <div class="bf" style="background:${fm.bg};color:${fm.col}">${fm.label}</div></div>`;
+          <div class="bf" style="background:${inj ? '#fde2e8' : fm.bg};color:${inj ? '#e5484d' : fm.col}">${inj ? '➕ Sakat' : fm.label}</div></div>`;
       }).join('');
       rightPanel = `<div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Oyuncu Değişikliği</div><div class="mono" style="color:#13a76a;background:#e7f8f0;padding:3px 8px;border-radius:6px;font-size:10px">${G.match.subsLeft} hak</div></div>
         ${out ? `<div style="border:1.5px solid #f3c6c8;background:#fdeced;border-radius:11px;padding:10px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:9px;background:#e5484d;display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(out)}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:13px">${out.name}</div><div class="mono" style="font-size:9px;color:#cf8589">${out.pos} · Güç ${out.ovr}</div></div><div style="font:800 8.5px 'Hanken Grotesk';color:#e5484d;background:#fff;border:1px solid #f3c6c8;padding:4px 7px;border-radius:6px">↓ ÇIKIYOR</div></div>` : '<div class="muted" style="font-size:11.5px;margin-bottom:10px">Sahadan çıkacak oyuncuya dokun.</div>'}
@@ -1530,23 +1564,29 @@
     });
     // bir kez: çıkacak seçiliyse yedeğe dokununca değişiklik anında yapılır (tek akış)
     document.querySelectorAll('[data-pin]').forEach(b => b.onclick = () => {
+      const inP = benchList(G.me).find(x => x.id === +b.dataset.pin);
+      if (inP && isInjured(inP)) { toast(inP.name + ' sakat — sahaya alınamaz'); return; }
       G.match.subIn = +b.dataset.pin;
       if (G.match.subOut != null && G.match.subsLeft > 0) return applySub();
       renderPanel();
     });
-    // panel: yedek satırını sahadaki oyuncunun üstüne sürükle → değişiklik
+    // panel: yedek satırını sahadaki oyuncunun üstüne sürükle → değişiklik (listener'lar bir kez; morph birikmesin)
     document.querySelectorAll('#match-overlay [data-pin]').forEach(row => {
-      row.setAttribute('draggable', 'true');
-      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', row.dataset.pin); row.classList.add('dragging'); const p = benchList(me).find(x => x.id === +row.dataset.pin); if (p) highlightFits(p, '#match-overlay'); });
+      row.setAttribute('draggable', 'true');   // morph siler → her render'da yeniden
+      if (row._dndBound) return; row._dndBound = true;
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', row.dataset.pin); row.classList.add('dragging'); const p = benchList(G.me).find(x => x.id === +row.dataset.pin); if (p) highlightFits(p, '#match-overlay'); });
       row.addEventListener('dragend', () => { row.classList.remove('dragging'); clearFits(); });
     });
     document.querySelectorAll('#match-overlay [data-pslot]').forEach(el => {
+      if (el._dndBound) return; el._dndBound = true;
       el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drop-target'); });
       el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
       el.addEventListener('drop', e => {
         e.preventDefault(); el.classList.remove('drop-target'); clearFits();
         const inId = +e.dataTransfer.getData('text/plain'); if (!inId) return;
         if (G.match.subsLeft <= 0) { toast('Değişiklik hakkın kalmadı'); return; }
+        const inP = benchList(G.me).find(x => x.id === inId);
+        if (inP && isInjured(inP)) { toast(inP.name + ' sakat — sahaya alınamaz'); return; }
         G.match.subOut = +el.dataset.pslot; G.match.subIn = inId; applySub();
       });
     });
@@ -1572,11 +1612,17 @@
     toast('Değişiklik yapıldı: ' + inP.name + ' oyunda');
     renderPanel();
   }
+  function matchClock() {
+    if (isOnline() && !amHost()) return Math.floor((G.match && G.match.curClock) || 0);   // guest: host'tan gelen saat
+    return Math.floor(G.match && G.match.live ? G.match.live.clock : 0);
+  }
   function logSub(inP, outP, club) {
-    const ev = { t: Math.floor(G.match.live ? G.match.live.clock : 0) + "'", type: 'sub', txt: `${inP.name} ↦ ${outP.name} · ${club.name}` };
+    const ev = { t: matchClock() + "'", type: 'sub', txt: `${inP.name} ↦ ${outP.name} · ${club.name}` };
     const box = document.getElementById('ev-box');
     if (box) { if (box.querySelector('.muted')) box.innerHTML = ''; box.insertAdjacentHTML('afterbegin', evRowHTML(ev)); while (box.children.length > 14) box.removeChild(box.lastChild); G.match.evHTML = box.innerHTML; }
-    pushCommentary(`Değişiklik — ${inP.name} oyuna girdi, ${outP.name} çıktı (${club.name}).`, 'turn');
+    const comm = `Değişiklik — ${inP.name} oyuna girdi, ${outP.name} çıktı (${club.name}).`;
+    pushCommentary(comm, 'turn');
+    if (isOnline()) { netSend({ t: 'm-event', ev }); netSend({ t: 'm-comm', txt: comm, type: 'turn' }); }   // rakip de değişikliği görsün
   }
 
   /* ============================================================
@@ -1600,13 +1646,13 @@
   function stopHostStream() { if (G.match && G.match.streamIv) { clearInterval(G.match.streamIv); G.match.streamIv = null; } }
   function streamFrame(live) {
     if (!live) return;
-    const P = []; const cd = [], so = [], st = [];
+    const P = []; const cd = [], so = [], st = [], ij = [];
     for (let i = 0; i < live.players.length; i++) {
       const p = live.players[i];
-      if (p && p.ref) { P.push(Math.round(p.x), Math.round(p.y)); if (p.carded) cd.push(i); if (p.sentOff) so.push(i); if (p.stam < 40) st.push(i); }
+      if (p && p.ref) { P.push(Math.round(p.x), Math.round(p.y)); if (p.carded) cd.push(i); if (p.sentOff) so.push(i); if (p.stam < 40) st.push(i); if (p.injured) ij.push(i); }
       else P.push(-9999, -9999);
     }
-    netSend({ t: 'm-frame', n: live.t, P, cd, so, st,
+    netSend({ t: 'm-frame', n: live.t, P, cd, so, st, ij,
       B: [Math.round(live.ball.x), Math.round(live.ball.y)],
       O: (live.owner != null ? live.owner : -1),
       R: live.ref ? [Math.round(live.ref.x), Math.round(live.ref.y)] : [0, 0],
@@ -1637,7 +1683,7 @@
   function applyGuestFrame(f) {
     const live = G.match && G.match.live; if (!live || !G.match.guest) return;
     const W = live.W, N = live.players.length, half = N / 2;
-    for (let i = 0; i < N; i++) { const p = live.players[i]; if (p) { p.carded = false; p.sentOff = false; p.stam = 100; } }
+    for (let i = 0; i < N; i++) { const p = live.players[i]; if (p) { p.carded = false; p.sentOff = false; p.stam = 100; p.injured = false; } }
     for (let hi = 0; hi < N; hi++) {
       const p = live.players[(hi + half) % N]; if (!p) continue;
       const x = f.P[hi * 2], y = f.P[hi * 2 + 1]; if (x <= -9000) continue;
@@ -1646,6 +1692,7 @@
     (f.cd || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.carded = true; });
     (f.so || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.sentOff = true; });
     (f.st || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.stam = 30; });
+    (f.ij || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.injured = true; });
     live.ball.x = W - f.B[0]; live.ball.y = f.B[1];
     live.owner = (f.O != null && f.O >= 0) ? (f.O + half) % N : null;
     if (live.ref) { live.ref.x = W - f.R[0]; live.ref.y = f.R[1]; }
@@ -1664,7 +1711,7 @@
   }
   function applyGuestUpdate(m) {
     const stats = flipStats(m.stats);
-    G.match.stats = stats;
+    G.match.stats = stats; G.match.curClock = m.clock;
     const a = document.getElementById('sb-a'), b = document.getElementById('sb-b'), c = document.getElementById('sb-clock');
     if (a) a.textContent = m.b; if (b) b.textContent = m.a; if (c) c.textContent = m.clockStr || (m.clock + "'");
     const st = document.getElementById('st-box'); if (st) st.innerHTML = statBars(stats);
@@ -1686,11 +1733,16 @@
     G.match.htReadyMe = true;
     if (!amHost()) netSend({ t: 'm-tactic', club: serializeClub(G.me) });
     netSend({ t: 'ht-ready' });
+    // İki yarı yalnızca host tarafından ve İKİ taraf da hazırken başlar (guest sadece ht-resume bekler)
     if (amHost()) tryHostResume(); else showHalftimeWaiting();
   }
-  function hostHalftimeReady() { G.match.htReadyOpp = true; tryHostResume(); }
+  function hostHalftimeReady() { if (!amHost()) return; G.match.htReadyOpp = true; tryHostResume(); }   // yalnızca host rakip hazırını işler
   function tryHostResume() {
-    if (!G.match.htReadyMe || !G.match.htReadyOpp) { showHalftimeWaiting(); return; }
+    if (!amHost()) return;
+    if (!G.match.htReadyMe || !G.match.htReadyOpp) {
+      if (G.match.htReadyMe) showHalftimeWaiting();   // host hazır, rakip bekleniyor; host hazır değilse panel açık kalsın
+      return;
+    }
     G.match.halftime = false; G.match.panelOpen = false;
     const o = document.getElementById('match-overlay'); if (o) o.innerHTML = '';
     if (G.match.live) G.match.live.resumeSecondHalf();
@@ -1798,13 +1850,20 @@
               <div class="hl-card up"><div class="label" style="font-size:10px;color:#13a76a;margin-bottom:9px">En Çok Gelişen</div><div class="flexc" style="gap:11px"><div style="width:38px;height:38px;border-radius:10px;background:${G.me.color};display:flex;align-items:center;justify-content:center;font:800 11px var(--mono);color:#fff">${tr ? shortOf({ name: tr.name }) : ''}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:15px">${tr ? tr.name : '—'}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${tr ? `${tr.pos} · ${tr.from} → ${tr.to}` : ''}</div></div><div class="mono" style="font-weight:900;font-size:16px;color:#13a76a">${tr ? '+' + tr.delta : ''}</div></div></div>
               <div class="hl-card down"><div class="label" style="font-size:10px;color:#e5484d;margin-bottom:9px">En Çok Düşen</div><div class="flexc" style="gap:11px"><div style="width:38px;height:38px;border-radius:10px;background:${G.me.color};display:flex;align-items:center;justify-content:center;font:800 11px var(--mono);color:#fff">${td ? shortOf({ name: td.name }) : ''}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:15px">${td ? td.name : '—'}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${td ? `${td.pos} · ${td.from} → ${td.to}` : ''}</div></div><div class="mono" style="font-weight:900;font-size:16px;color:#e5484d">${td ? td.delta : ''}</div></div></div>
               <div class="hl-card flexc" style="gap:11px"><div style="width:30px;height:30px;border-radius:8px;background:#fbf6e6;display:flex;align-items:center;justify-content:center;font-size:15px">🏅</div><div style="flex:1"><div class="label" style="font-size:10px">Maçın Oyuncusu</div><div style="font-family:var(--arch);font-weight:800;font-size:14px">${dev.motm ? dev.motm.name : '—'}</div></div></div>
-              <div style="border:1px dashed #cfe0fb;background:#f4f8fe;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#2f63d0;margin-bottom:4px">Not</div><div style="font:500 11.5px 'Hanken Grotesk';color:#5a7099;line-height:1.4">Maçlar bir yıl arayla oynanır — oyuncular dinlenmiş gelir. Enerji yalnızca maç içinde önemlidir.</div></div>
+              ${injuredNoteHTML()}
+              <div style="border:1px dashed #cfe0fb;background:#f4f8fe;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#2f63d0;margin-bottom:4px">Not</div><div style="font:500 11.5px 'Hanken Grotesk';color:#5a7099;line-height:1.4">Maçlar peş peşe oynanır — oyuncular tam dinlenmez ama maç sonrası sağlam toparlanır. Oynayanlar daha yorgun, kenardakiler daha taze başlar. Sakat oyuncular iyileşene kadar oynayamaz.</div></div>
             </div>
           </div>
           <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><button class="btn btn-green" id="to-duello">Düello'ya Geç →</button></div>
         </div>
       </div>
     </div>`;
+  }
+  function injuredNoteHTML() {
+    const inj = (G.me.squad || []).filter(p => p.injuredMatches > 0);
+    if (!inj.length) return '';
+    const list = inj.map(p => `${p.name} <span style="color:#b86">(${p.injuredMatches} maç)</span>`).join(' · ');
+    return `<div style="border:1px solid #f3c6c8;background:#fdeced;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#e5484d;margin-bottom:4px">➕ Sakatlar — sıradaki maçta yok</div><div style="font:500 11.5px 'Hanken Grotesk';color:#a05055;line-height:1.5">${list}</div></div>`;
   }
   function bindBetween() {
     document.getElementById('to-duello').onclick = () => {
