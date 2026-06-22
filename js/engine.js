@@ -216,9 +216,16 @@
       if (this._kickoffBackPass && this.ballMode === 'held' && this.owner != null) {
         this._kickoffBackPass = false;
         const o = this.players[this.owner]; const dir = o.team === 0 ? 1 : -1;
-        let best = null, bd = 1e9;
-        for (let k = 0; k < 22; k++) { const m = this.players[k]; if (!m || !m.ref || m.team !== o.team || m === o || m.isGK || m.sentOff) continue; if ((m.x - o.x) * dir < -6) { const d = dist(m, o); if (d < bd) { bd = d; best = m; } } }
-        if (best) { this.passTo(o, best, 0); this.say('Santra yapıldı — top geriye, oyun başlıyor.', 'info'); }
+        const behind = [];
+        for (let k = 0; k < 22; k++) { const m = this.players[k]; if (!m || !m.ref || m.team !== o.team || m === o || m.isGK || m.sentOff) continue; if ((m.x - o.x) * dir < -10) behind.push(m); }
+        let best = null;
+        if (behind.length) {
+          const deep = behind.filter(m => m.line <= 2);   // savunmacı / ön libero → net geriye pas
+          const pool = deep.length ? deep : behind;
+          pool.sort((a, b) => Math.abs(a.y - this.H / 2) - Math.abs(b.y - this.H / 2));   // en merkezdeki
+          best = pool[0];
+        }
+        if (best) { this.passTo(o, best, 0); this.say('Santra yapıldı — top geriye verildi, oyun başlıyor.', 'info'); }
         else { this.actCD = 8; }   // geride kimse yoksa normal oyuna dön
       }
       this.updateSubWalkers(sp);
@@ -256,17 +263,21 @@
         const taskOff = task === 'Hücum' ? 1 : task === 'Savunma' ? -1 : 0;
         // BLOK topun boylamına göre yukarı/aşağı kayar — formasyon hat aralıkları (hx) korunur,
         // böylece "ip gibi ortada toplanma" olmaz; takım sahada ileri/geri hareket eder.
-        const slide = this.ball.x - this.W / 2; const commit = myTac.commit;
+        const W = this.W, commit = myTac.commit;
+        // topun, bu oyuncunun HÜCUM yönündeki ilerlemişliği (0 = kendi kalesi, 1 = rakip kale)
+        const adv = p.team === 0 ? this.ball.x / W : 1 - this.ball.x / W;
         const wide = Math.abs(p.hy - this.H / 2) > this.H * 0.16;   // kanat oyuncusu mu
-        let tx, ty = this.H / 2 + (p.hy - this.H / 2) * (myTac.width * (attacking ? 1.06 : 0.9));
+        let tx, ty = this.H / 2 + (p.hy - this.H / 2) * (myTac.width * (attacking ? 1.04 : 0.88));
         if (attacking) {
-          // yüksek blok: pozisyon çoğunlukla SABİT ileri itmeden gelir (topa daha az bağlı) →
-          // top geriye gidince oyuncular boşuna geri koşmaz, ileride alan arar.
-          tx = p.hx + slide * (0.32 + commit * 0.22) + dir * (commit * (56 + p.fwd * 124)) + dir * taskOff * 24;
+          // TÜM TAKIM topyekûn yukarı çıkar ama KOMPAKT: derin oyuncular (defans/orta saha) daha çok adım atar,
+          // forvetler zaten yukarıda olduğu için az → blok öne taşınır, forvetler ofsayt çizgisini aşmaz.
+          const lineLift = 1.25 - p.fwd * 0.62;   // fwd 0 (defans) ~1.25 · fwd 1 (forvet) ~0.63
+          tx = p.hx + dir * commit * (90 + adv * 300) * lineLift + dir * taskOff * 24;
           if (wide) ty += (p.hy < this.H / 2 ? -1 : 1) * (16 + myTac.wing * 22 + commit * 12);   // kanatları çizgiye yapıştır (overlap)
         } else {
-          // savunmada blok geri kayar ama mentaliteye göre; çok geriye yaslanmaz
-          tx = p.hx + slide * 0.5 - dir * ((6 + (1 - myTac.line) * 16) * (0.4 + (1 - p.fwd) * 0.55)) + dir * taskOff * 8;
+          // savunmada blok geri çekilir; rakip ne kadar ilerlediyse (threat) o kadar, dizilişi koruyarak.
+          const threat = 1 - adv;
+          tx = p.hx - dir * (22 + threat * 170) * (0.5 + (1 - p.fwd) * 0.55) + dir * taskOff * 8;
         }
         if (owner) ty += (owner.y - this.H / 2) * (attacking ? 0.06 : 0.12);
 
@@ -300,7 +311,9 @@
         if (!isTaker) { tx += Math.sin((this.t + i * 17) / 26) * 2.8; ty += Math.cos((this.t + i * 11) / 24) * 2.8; }
         tx = clamp(tx, 24, this.W - 24); ty = clamp(ty, 30, this.H - 30);
         const stamFac = 0.62 + 0.38 * (p.stam / 100);
-        const maxStep = (frozen ? 0.5 : (i === this.owner || isTaker) ? 2.6 : (cornerCrowd || defendCorner || presserSet.has(i)) ? 2.5 : 1.55) * sp * stamFac;
+        // hücum eden oyuncular daha hızlı yer alır (topla beraber yukarı çıkabilsinler), savunanlar da çabuk toparlanır
+        const baseStep = (i === this.owner || isTaker) ? 2.6 : (cornerCrowd || defendCorner || presserSet.has(i) || runnerSet.has(i)) ? 2.5 : attacking ? 2.1 : 1.75;
+        const maxStep = (frozen ? 0.5 : baseStep) * sp * stamFac;
         const ox = p.x, oy = p.y;
         p.x += clamp(tx - p.x, -maxStep, maxStep); p.y += clamp(ty - p.y, -maxStep, maxStep);
         // stamina: hareket + baskı + tempoya göre düşer (FİZ yavaşlatır). ~60'da belirgin yorgunluk.
@@ -564,10 +577,10 @@
       const opt = mates.map(m => ({ m, gain: (m.x - owner.x) * dir, d: dist(m, owner), open: this.nearestOppDist(m) }));
 
       // ŞUT — sadece ceza sahası ve hafif gerisinden. Orta sahadan şut YOK.
-      if (!wide && distGoal < W * 0.13) { if (Math.random() < 0.92 * sb) return this.shoot(owner); }       // ceza sahası içi
-      else if (!wide && distGoal < W * 0.19) { if (Math.random() < 0.62 * sb) return this.shoot(owner); }   // sahanın hemen önü
-      else if (!wide && distGoal < W * 0.23) { if (Math.random() < 0.16 * sb) return this.shoot(owner); }   // ceza sahası hafif gerisi — nadir uzaktan şut
-      else if (wide && distGoal < W * 0.16) { if (Math.random() < 0.32 * sb) return this.shoot(owner); }     // dar açı
+      if (!wide && distGoal < W * 0.13) { if (Math.random() < 0.95 * sb) return this.shoot(owner); }       // ceza sahası içi
+      else if (!wide && distGoal < W * 0.19) { if (Math.random() < 0.74 * sb) return this.shoot(owner); }   // sahanın hemen önü
+      else if (!wide && distGoal < W * 0.23) { if (Math.random() < 0.22 * sb) return this.shoot(owner); }   // ceza sahası hafif gerisi — nadir uzaktan şut
+      else if (wide && distGoal < W * 0.16) { if (Math.random() < 0.40 * sb) return this.shoot(owner); }     // dar açı
 
       // ===== SON BÖLGE: penetrasyon (geri çevirme yok) =====
       if (attThird) {
@@ -649,7 +662,7 @@
         const tired = owner.stam < 45 ? 0.88 : 1;
         // uzaklık cezası: kale dışından gelen şutlar neredeyse hiç gol olmaz
         const distFac = clamp(1 - ((this._shotDist || 0) / (this.W * 0.30)) * 0.5, 0.22, 1);
-        const goalP = Math.min(0.84, 1.6 * (owner.sh / 78) * (att / (att + def)) * 2 * (1 - gkSave / 230) * tired * distFac);
+        const goalP = Math.min(0.85, 2.0 * (owner.sh / 78) * (att / (att + def)) * 2 * (1 - gkSave / 230) * tired * distFac);
         if (Math.random() < goalP) {
           if (team === 0) this.a++; else this.b++; this.fireGoal(team, owner.ref);
           const gy = clamp(this.ball.ty, this.H / 2 - 30, this.H / 2 + 30);   // top kale içinde kalsın
