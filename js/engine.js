@@ -71,6 +71,7 @@
       this.onEnd = opts.onEnd || (() => {});
       this.onCommentary = opts.onCommentary || (() => {});
       this.onHalftime = opts.onHalftime || (() => {});
+      this.onSound = opts.onSound || (() => {});
       this.colA = clubA.color || '#3b6fe0'; this.colB = clubB.color || '#e8893b';
       this.reset();
     }
@@ -148,7 +149,7 @@
           tempo: 0.80 + (f.Tempo || 0) * 0.13,                              // aksiyon temposu
           width: 0.92 + (f['Genişlik'] || 0) * 0.12 + (phil === 'Kanat' ? 0.18 : 0), // saha genişliği
           // hücumda kaç oyuncuyla ileri çıkılır (mentalite + felsefe). Defansif blok düşük.
-          commit: 0.66 + mi * 0.12 + (phil === 'Defansif Blok' ? -0.30 : (phil === 'Yüksek Pres' || phil === 'Direkt' || phil === 'Kontra' || phil === 'Kanat') ? 0.12 : 0) + (f.Tempo || 0) * 0.03,
+          commit: 0.86 + mi * 0.12 + (phil === 'Defansif Blok' ? -0.34 : (phil === 'Yüksek Pres' || phil === 'Direkt' || phil === 'Kontra' || phil === 'Kanat') ? 0.14 : 0) + (f.Tempo || 0) * 0.03,
           wing: phil === 'Kanat' ? 1 : 0.45,
           directness: phil === 'Direkt' ? 1 : phil === 'Topa Sahip Olma' ? -1 : phil === 'Kontra' ? 0.6 : phil === 'Kanat' ? 0.2 : 0,
           shoot: phil === 'Direkt' ? 1.3 : phil === 'Topa Sahip Olma' ? 0.78 : phil === 'Kontra' ? 1.12 : 1,
@@ -173,9 +174,11 @@
       for (let i = 1; i < 11; i++) { const p = this.players[base + i]; if (p && p.ref && p.line >= 2 && p.line <= 3) { best = base + i; break; } }
       this.owner = best; this.ballMode = 'held'; this.actCD = 999; this._lastPass = null;
       const o = this.players[best];
-      o.kx = this.W / 2; o.ky = this.H / 2;   // YALNIZCA topçu santraya yürür
-      this.ball.tx = this.W / 2; this.ball.ty = this.H / 2;
-      this.kickoffFreeze = 42;   // oyuncular düzene yürürken topun başında bekleme
+      // tek santra adamı ZATEN merkezde durur (yürüyüp "alıp gelmez"), top onun ayağında, hakem topu verir
+      o.kx = this.W / 2; o.ky = this.H / 2; o.x = this.W / 2 - (team === 0 ? 14 : -14); o.y = this.H / 2;
+      this.ball.x = this.W / 2; this.ball.y = this.H / 2; this.ball.tx = this.W / 2; this.ball.ty = this.H / 2;
+      if (this.ref) { this.ref.x = this.W / 2; this.ref.y = this.H / 2 + 30; }   // hakem santrada
+      this.kickoffFreeze = 42;   // diğer oyuncular düzene yürürken topun başında bekleme
       this._kickoffBackPass = true;   // freeze bitince geriye paslayıp oyun başlar
       if (!silent) this.say('Oyun yeniden başladı — ' + this.clubName(team) + ' topla.', 'info');
     }
@@ -267,7 +270,7 @@
         atts.forEach(ai => { let bd = 1e9, bi = -1; defs.forEach(di => { if (used.has(di)) return; const d = dist(this.players[di], this.players[ai]); if (d < bd) { bd = d; bi = di; } }); if (bi >= 0) { used.add(bi); markBy[bi] = ai; } });
         // koşucular: agresif taktikte daha çok oyuncu derine koşar
         const dr = poss === 0 ? 1 : -1; const g = this.goalFor(poss);
-        const runnerN = Math.min(4, 1 + Math.round(this.tac[poss].commit * 1.7));
+        const runnerN = Math.min(6, 2 + Math.round(this.tac[poss].commit * 3));   // atakta daha çok oyuncu ileri koşar
         const fwd = atts.filter(ai => (this.players[ai].x - owner.x) * dr > -40).sort((x, y) => dist(this.players[x], g) - dist(this.players[y], g));
         for (let k = 0; k < Math.min(runnerN, fwd.length); k++) runnerSet.add(fwd[k]);
       }
@@ -348,9 +351,27 @@
         const maxStep = (frozen ? 0.5 : baseStep) * sp * stamFac;
         const ox = p.x, oy = p.y;
         p.x += clamp(tx - p.x, -maxStep, maxStep); p.y += clamp(ty - p.y, -maxStep, maxStep);
+        p._dx = p.x - ox; p._dy = p.y - oy;   // hareket yönü (top taşıyıcı topu önüne iter)
         // stamina: hareket + baskı + tempoya göre düşer (FİZ yavaşlatır). ~60'da belirgin yorgunluk.
         if (!frozen) { const moved = Math.hypot(p.x - ox, p.y - oy); p.stam = Math.max(12, p.stam - (0.004 + moved * 0.0016 + (presserSet.has(i) || i === this.owner ? 0.006 : 0)) * (1.25 - p.fiz / 130) * this.tac[p.team].tempo * sp * 2.7); }
       });
+
+      // OYUNCU AYRIŞMASI: üst üste binmesin — top taşıyıcı az itilir (çalım yolu korunur), markajcı yana açılır
+      // (ikili mücadele/çalım görünür olsun; hem 2D hem 3D hem online host'ta tutarlı çalışır)
+      if (!frozen) for (let a = 0; a < 22; a++) {
+        const pa = this.players[a]; if (!pa || !pa.ref || pa.sentOff) continue;
+        for (let b = a + 1; b < 22; b++) {
+          const pb = this.players[b]; if (!pb || !pb.ref || pb.sentOff) continue;
+          const dx = pb.x - pa.x, dy = pb.y - pa.y, d = Math.hypot(dx, dy);
+          const min = (pa.isGK || pb.isGK) ? 19 : 16;
+          if (d < min && d > 0.01) {
+            const ux = dx / d, uy = dy / d, push = (min - d) / 2;
+            const ca = Math.min(push, a === this.owner ? 0.35 : 1.1), cb = Math.min(push, b === this.owner ? 0.35 : 1.1);
+            pa.x = clamp(pa.x - ux * ca, 24, this.W - 24); pa.y = clamp(pa.y - uy * ca, 30, this.H - 30);
+            pb.x = clamp(pb.x + ux * cb, 24, this.W - 24); pb.y = clamp(pb.y + uy * cb, 30, this.H - 30);
+          }
+        }
+      }
 
       // taç/korner: oyuncu topa ulaşınca oyun başlar
       if (this.ballMode === 'restart' && this.restart) {
@@ -372,10 +393,16 @@
 
       // top — tutulan top oyuncuya YUVARLANIR (sahip değişince ışınlanmaz)
       if (this.ballMode === 'held' && owner) {
-        const tx = owner.x + (owner.team === 0 ? 12 : -12), ty = owner.y;
-        const jump = Math.hypot(tx - this.ball.x, ty - this.ball.y);
-        if (jump > 40) { this.ball.x = lerpf(this.ball.x, tx, 0.5); this.ball.y = lerpf(this.ball.y, ty, 0.5); }
-        else { this.ball.x = tx; this.ball.y = ty; }
+        // VURUP KOŞMA: top oyuncunun ÖNÜNDE (hareket yönünde), hızlandıkça daha ileri itilir → arkasından koşar
+        const dir = owner.team === 0 ? 1 : -1;
+        const dx = owner._dx || 0, dy = owner._dy || 0, mv = Math.hypot(dx, dy);
+        const lead = 11 + Math.min(20, mv * 9);   // dururken ayak ucu, koşarken topu öne dokundurur
+        let tx, ty;
+        if (mv > 0.35) { tx = owner.x + dx / mv * lead; ty = owner.y + dy / mv * lead; }   // koştuğu yöne
+        else { tx = owner.x + dir * 12; ty = owner.y; }                                     // dururken kaleye dönük
+        tx = clamp(tx, 24, this.W - 24); ty = clamp(ty, 30, this.H - 30);
+        // ışınlanma YOK: top yuvarlanır (öne itildiğinde oyuncu peşinden yetişir)
+        this.ball.x = lerpf(this.ball.x, tx, 0.42); this.ball.y = lerpf(this.ball.y, ty, 0.42);
       }
       else if (this.ballMode === 'pass' || this.ballMode === 'shot') {
         // pas hedefi alıcıyı takip eder → top oyuncuya ulaşır, ışınlanmaz (taça giden pas hariç)
@@ -596,7 +623,7 @@
       }
       let ty = target.y; this._passWayward = false;
       if (Math.random() < 0.02) { ty = (target.y < this.H / 2 ? 6 : this.H - 6); this._passWayward = true; }   // ender hatalı pas (taç)
-      this.ballMode = 'pass'; this.ball.tx = target.x; this.ball.ty = ty; this._passTarget = this.players.indexOf(target);
+      this.ballMode = 'pass'; this.ball.tx = target.x; this.ball.ty = ty; this._passTarget = this.players.indexOf(target); this.onSound('pass');
       this._passerId = owner.ref.id; this._intercept = null;
       const ib = interceptBase == null ? 0.08 : interceptBase;
       for (const o of this.players) { if (o.team === owner.team || !o.ref || o.isGK) continue; if (segDist(owner, { x: target.x, y: ty }, o) < 13 && Math.random() < ib) { this._intercept = this.players.indexOf(o); break; } }
@@ -607,9 +634,11 @@
       for (let i = 0; i < 22; i++) { const p = this.players[i]; if (p && p.ref && p.team === team && !p.isGK && !p.sentOff && p !== owner && this.inPenaltyBox(p, 1 - team)) box.push(p); }
       let target = box.length ? box[Math.floor(Math.random() * box.length)] : this.players.filter(p => p.team === team && p.ref && !p.isGK && p !== owner).sort((a, b) => (b.x - a.x) * dir)[0];
       if (!target) return this.shoot(owner);
+      this._aerial = true;   // orta = havadan top → alıcı kutudaysa kafayla deneyebilir
       this.passTo(owner, target, 0.17);
     }
     ownerAction(owner) {
+      this._aerial = false;   // yerden oynanan top (orta/korner dışı şutlar havadan sayılmasın)
       const team = owner.team, dir = team === 0 ? 1 : -1, g = this.goalFor(team); const tac = this.tac[team]; const W = this.W;
       const distGoal = Math.abs(owner.x - g.x); const sb = tac.shoot;
       const wide = Math.abs(owner.y - this.H / 2) > this.H * 0.20;
@@ -677,10 +706,25 @@
         if (this._intercept == null && this._passerId != null) this._lastPass = { id: this._passerId, team: recv.team };
         else this._lastPass = null;
         this.owner = ni; this.poss = recv.team; this.ballMode = 'held'; this._intercept = null; this.actCD = (8 + Math.random() * 10) / this.tac[this.poss].tempo;
+        // HAVADAN TOP kutuya geldiyse: kafa topu / vole denemesi (kaleci hariç)
+        if (this._aerial && this._intercept == null && recv && !recv.isGK && !recv.sentOff) {
+          const g = this.goalFor(recv.team); const inBox = Math.abs(recv.x - g.x) < this.W * 0.17 && Math.abs(recv.y - this.H / 2) < this.H * 0.30;
+          if (inBox && Math.random() < 0.74) { this._aerial = false; return this.shoot(recv, 'header'); }
+        }
+        this._aerial = false;
       } else if (this.ballMode === 'shot') this.resolveShot();
     }
-    shoot(owner) {
+    shoot(owner, type) {
       const team = owner.team; const g = this.goalFor(team);
+      const aerial = !!this._aerial; this._aerial = false;
+      // ŞUT TİPİ: kafa (havadan kutuda), vole/rövaşata (havadan), plase (yerden finesse), normal
+      if (!type) {
+        if (aerial) type = Math.random() < 0.16 ? 'bicycle' : 'volley';   // havadan: nadiren rövaşata, çoğu vole
+        else type = Math.random() < 0.26 ? 'placed' : 'normal';            // yerden: bazen plase
+      }
+      const accMod = type === 'header' ? 0.84 : type === 'volley' ? 0.82 : type === 'bicycle' ? 0.6 : type === 'placed' ? 1.12 : 1;
+      this._shotType = type;
+      this._kickAnim = { idx: this.players.indexOf(owner), t: this.t, type }; this.onSound('kick');   // 3D animasyonu için şutçu+zaman+tip
       if (team === 0) this.stats.shotsA++; else this.stats.shotsB++;
       const tired = owner.stam < 45 ? 0.85 : 1;
       this._shotDist = Math.abs(owner.x - g.x);
@@ -689,7 +733,7 @@
       let xg = clamp(0.72 * Math.exp(-(this._shotDist / this.W) * 8.5), 0.02, 0.6); if (!central) xg *= 0.55;
       if (team === 0) this.stats.xgA += xg; else this.stats.xgB += xg;
       const distPen = clamp(1 - (this._shotDist / (this.W * 0.30)) * 0.55, 0.4, 1);  // uzaktan isabet zor
-      const onTarget = Math.random() < (0.42 + owner.sh / 320) * tired * distPen;
+      const onTarget = Math.random() < (0.42 + owner.sh / 320) * tired * distPen * accMod;
       this._shotOnTarget = onTarget; this._shotTeam = team; this._shotOwner = owner;
       this.ballMode = 'shot';
       // isabetli şut KALE İÇİNE gider (±26, kale direkleri ±34); isabetsiz direklerin AÇIKÇA dışına
@@ -706,7 +750,7 @@
         const tired = owner.stam < 45 ? 0.88 : 1;
         // uzaklık cezası: kale dışından gelen şutlar neredeyse hiç gol olmaz
         const distFac = clamp(1 - ((this._shotDist || 0) / (this.W * 0.30)) * 0.5, 0.22, 1);
-        const goalP = Math.min(0.85, 2.3 * (owner.sh / 78) * (att / (att + def)) * 2 * (1 - gkSave / 230) * tired * distFac);
+        const goalP = Math.min(0.8, 1.7 * (owner.sh / 78) * (att / (att + def)) * 2 * (1 - gkSave / 230) * tired * distFac);
         if (Math.random() < goalP) {
           if (team === 0) this.a++; else this.b++; this.fireGoal(team, owner.ref);
           const gy = clamp(this.ball.ty, this.H / 2 - 30, this.H / 2 + 30);   // top kale içinde kalsın
@@ -716,6 +760,7 @@
           return;
         }
         // kurtarış → korner ihtimali
+        this._saveAnim = { idx: team === 0 ? 11 : 0, t: this.t, side: this.ball.ty < this.H / 2 ? -1 : 1 }; this.onSound('save');   // 3D: kaleci dalış yönü
         this.say('Müthiş kurtarış! Kaleci çıkardı.', 'save'); this.flash = { txt: 'KURTARIŞ', col: '#eaf0f6' }; this._flashUntil = this.t + 32;
         if (Math.random() < 0.62) return this.setCorner(team);
         return this.setGoalKick(1 - team);
@@ -785,7 +830,7 @@
       let target = box.length ? box[Math.floor(Math.random() * box.length)] : null;
       if (!target) { const mates = this.players.filter(p => p.team === team && p.ref && !p.isGK && p !== owner).sort((a, b) => (b.x - a.x) * dir); target = mates[0]; }
       if (!target) { this.ballMode = 'held'; this.actCD = 8; return; }
-      this.ballMode = 'pass'; this._passWayward = false; this.ball.tx = target.x; this.ball.ty = target.y; this._passTarget = this.players.indexOf(target);
+      this.ballMode = 'pass'; this._passWayward = false; this._aerial = true; this.ball.tx = target.x; this.ball.ty = target.y; this._passTarget = this.players.indexOf(target);
       this._passerId = owner.ref.id; this._intercept = null;
       for (const o of this.players) { if (o.team === team || !o.ref || o.isGK) continue; if (segDist(owner, target, o) < 16 && Math.random() < 0.18) { this._intercept = this.players.indexOf(o); break; } }
       this.say('Korner ortası ceza sahasına geliyor…', 'set');
@@ -950,7 +995,8 @@
       if (team === 0) this.stats.foulsA++; else this.stats.foulsB++;
       // faul savunan takımın ceza sahasında mı? → penaltı
       const victim = this.owner != null ? this.players[this.owner] : null;
-      if (victim) this.maybeInjure(victim, 0.10);   // sert faulde sakatlık riski
+      if (victim) { this.maybeInjure(victim, 0.10); this._fallAnim = { idx: this.owner, t: this.t }; }   // sert faulde sakatlık + 3D'de yere düşme
+      this.onSound('whistle');
       if (victim && this.inPenaltyBox(victim, team)) return this.setPenalty(1 - team);
       const t = Math.floor(this.clock) + "'";
       const already = (this.cards[fouler.ref.id] || 0) >= 1;
@@ -993,6 +1039,7 @@
       const ev = { t: Math.floor(this.clock) + "'", type: 'goal', team, txt: `⚽ ${scorer.name}${assist ? '' : ''} · ${club.name}`, scorer: scorer.id, assist };
       this.events.unshift(ev); this.onEvent(ev, { a: this.a, b: this.b });
       this.say('GOOOL! ' + scorer.name + ' ağları sarstı! ' + this.clubName(team) + ' sevinçte!', 'goal');
+      this.onSound('net'); this.onSound('goal');   // fileye çarpan top + seyirci coşkusu
       // tekrar için son anların kopyası
       this.pendingReplay = { frames: this.frameBuffer.slice(-80), name: surOf(scorer), team };
     }
@@ -1114,6 +1161,7 @@
       ctx.textAlign = 'center';
     }
     draw() {
+      if (this.r3d && this.r3d.active) { this.r3d.render(); return; }   // 3D görselleştirici aktifse 2D'yi atla
       const ctx = this.ctx, W = this.W, H = this.H;
       if (this.phase === 'replay' && this.replay) return this.drawReplay();
       if (this.phase === 'shootout' && this.shootout) return this.drawShootout();

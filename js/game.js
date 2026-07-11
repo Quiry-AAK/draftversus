@@ -43,6 +43,7 @@
     if (v > cur && focusUsed(club) + (v - cur) > FOCUS_BUDGET) { toast('Kalan odak puanı yok — başka bir alanı düşür'); return false; }
     club.focus[k] = v; return true;
   }
+  const T = (s) => window.KD_I18N ? KD_I18N.T(s) : s;   // dil çevirisi (TR varsayılan)
   const STEPS = ['Lobi', 'Draft', 'Düello', 'Taktik', 'Maç', 'Maç Arası', 'Sonuç'];
   const SCREEN_STEP = { lobby: 0, draft: 1, duello: 2, tactics: 3, match: 4, between: 5, result: 6 };
 
@@ -135,19 +136,20 @@
     bindScreen();
   }
   function appbar() {
+    const langBtn = `<button class="btn btn-ghost" id="lang-btn" style="padding:7px 11px;font-size:12px;font-weight:800">${(window.KD_I18N ? KD_I18N.lang() : 'tr').toUpperCase()}</button>`;
     if (G.screen === 'home' || G.screen === 'online') {
-      const tag = G.screen === 'online' ? '<span class="step active">Online</span>' : '';
+      const tag = G.screen === 'online' ? `<span class="step active">${T('Online')}</span>` : '';
       return `<div class="appbar">
         <div class="brand"><div class="brand-logo"><div></div></div><div class="brand-name">DRAFT<span>VERSUS</span></div></div>
         <div class="steps">${tag}</div>
-        <div class="appbar-right">${G.screen === 'online' ? '<button class="btn btn-ghost" id="online-back" style="padding:7px 14px;font-size:12px">← Geri</button>' : ''}</div>
+        <div class="appbar-right">${langBtn}${G.screen === 'online' ? `<button class="btn btn-ghost" id="online-back" style="padding:7px 14px;font-size:12px">${T('← Geri')}</button>` : ''}</div>
       </div>`;
     }
     const cur = SCREEN_STEP[G.screen];
     const steps = STEPS.map((s, i) => {
-      if (i === cur) return `<span class="step active">${s}</span>`;
+      if (i === cur) return `<span class="step active">${T(s)}</span>`;
       const cls = i < cur ? 'step done' : 'step';
-      return `<span class="${cls}">${i < cur ? '<span class="dot"></span>' : ''}${s}</span>`;
+      return `<span class="${cls}">${i < cur ? '<span class="dot"></span>' : ''}${T(s)}</span>`;
     }).join('<span class="step-sep">·</span>');
     const me = G.me;
     const right = me ? `<div class="club-chip"><span class="sw" style="background:${me.color}"></span>${me.name}</div>
@@ -189,19 +191,19 @@
      ============================================================ */
   function homeHTML() {
     return `<div class="screen">
-      ${head('00', 'Nasıl oynamak istersin?', 'Yapay zekâya karşı tek başına ya da bir arkadaşınla online 1v1 — bir oda kur veya kodla katıl.')}
+      ${head('00', T('Nasıl oynamak istersin?'), T('Yapay zekâya karşı tek başına ya da bir arkadaşınla online 1v1 — bir oda kur veya kodla katıl.'))}
       <div class="wrap-frame" style="padding:40px 30px;background:linear-gradient(180deg,#fbfcfd,#fff)">
         <div class="lobby-grid">
           <div class="lobby-card" style="cursor:pointer" id="mode-ai">
-            <div class="flexc" style="gap:9px;margin-bottom:4px"><div style="width:30px;height:30px;border-radius:8px;background:#fbf0e6;display:flex;align-items:center;justify-content:center;color:#cf6f24;font-weight:800;font-family:var(--arch)">YZ</div><div style="font-family:var(--arch);font-weight:800;font-size:19px">Yapay Zekâ ile Oyna</div></div>
-            <div class="muted" style="font-size:13px;margin-bottom:22px;line-height:1.5">Tek kişilik. Rakibin draft, çalma/koruma ve taktik kararlarını yapay zekâ verir. İnternet gerekmez.</div>
-            <button class="btn btn-dark" id="mode-ai-btn" style="width:100%">Tek Kişilik Başla →</button>
+            <div class="flexc" style="gap:9px;margin-bottom:4px"><div style="width:30px;height:30px;border-radius:8px;background:#fbf0e6;display:flex;align-items:center;justify-content:center;color:#cf6f24;font-weight:800;font-family:var(--arch)">YZ</div><div style="font-family:var(--arch);font-weight:800;font-size:19px">${T('Yapay Zekâ ile Oyna')}</div></div>
+            <div class="muted" style="font-size:13px;margin-bottom:22px;line-height:1.5">${T('Tek kişilik. Rakibin draft, çalma/koruma ve taktik kararlarını yapay zekâ verir. İnternet gerekmez.')}</div>
+            <button class="btn btn-dark" id="mode-ai-btn" style="width:100%">${T('Tek Kişilik Başla →')}</button>
           </div>
           <div class="lobby-or"><div class="bar"></div><div style="font:700 11px 'Hanken Grotesk';color:var(--faint);letter-spacing:.08em">VEYA</div><div class="bar"></div></div>
           <div class="lobby-card" style="cursor:pointer" id="mode-online">
             <div class="flexc" style="gap:9px;margin-bottom:4px"><div style="width:30px;height:30px;border-radius:8px;background:#e7f8f0;display:flex;align-items:center;justify-content:center;color:#13a76a;font-weight:800;font-family:var(--arch)">⇆</div><div style="font-family:var(--arch);font-weight:800;font-size:19px">Online (Oda) 1v1</div></div>
             <div class="muted" style="font-size:13px;margin-bottom:22px;line-height:1.5">Bir oda kur (4 haneli kod alırsın) ya da arkadaşının kodunu girip katıl. Canlı maç ikiniz de taktiğinizi bitirip "Hazır" demeden başlamaz.</div>
-            <button class="btn btn-green" id="mode-online-btn" style="width:100%">Online Oyna →</button>
+            <button class="btn btn-green" id="mode-online-btn" style="width:100%">${T('Online Oyna →')}</button>
             ${NET && !NET.available() ? '<div class="muted" style="font-size:11px;margin-top:10px;color:#cf6f24">Not: online için oyunu sunucu üzerinden aç (file:// ile çalışmaz).</div>' : ''}
           </div>
         </div>
@@ -216,6 +218,11 @@
     document.getElementById('mode-ai-btn').onclick = (e) => { stop(e); goAI(); };
     document.getElementById('mode-online').onclick = goOnline;
     document.getElementById('mode-online-btn').onclick = (e) => { stop(e); goOnline(); };
+    bindLangBtn();
+  }
+  function bindLangBtn() {
+    const lb = document.getElementById('lang-btn');
+    if (lb) lb.onclick = () => { if (window.KD_I18N) KD_I18N.toggle(); render(); };
   }
 
   /* ============================================================
@@ -301,6 +308,7 @@
     const o = G.online;
     const back = document.getElementById('online-back');
     if (back) back.onclick = () => { if (NET) NET.leave(); G.online.status = 'idle'; G.screen = 'home'; render(); };
+    bindLangBtn();
     document.querySelectorAll('[data-otab]').forEach(b => b.onclick = () => { o.tab = b.dataset.otab; render(); });
     document.querySelectorAll('[data-ofmt]').forEach(b => b.onclick = () => { o.format = +b.dataset.ofmt; render(); });
     document.querySelectorAll('#o-swatches [data-ocolor]').forEach(b => b.onclick = () => { o.color = +b.dataset.ocolor; render(); });
@@ -407,7 +415,7 @@
       case 'm-frame': applyGuestFrame(m); break;
       case 'm-update': applyGuestUpdate(m); break;
       case 'm-event': guestEvent(m.ev); break;
-      case 'm-comm': pushCommentary(m.txt, m.type); break;
+      case 'm-comm': pushCommentary(m.txt, m.type); if (window.KD_SFX) { if (m.type === 'goal') { KD_SFX.play('net'); KD_SFX.play('goal'); } else { const mp = { shot: 'kick', save: 'save', foul: 'whistle', set: 'whistle' }; if (mp[m.type]) KD_SFX.play(mp[m.type]); } } break;
       case 'm-halftime': guestHalftime(m.kind); break;
       case 'ht-ready': hostHalftimeReady(); break;
       case 'ht-resume': guestResume(); break;
@@ -669,6 +677,11 @@
       </div>
     </div>`;
   }
+  function avatarHTML(p, size) {
+    if (!window.KD_AVATAR || !p) return '';
+    const s = size || 40;
+    return `<div class="avatar" style="width:${s}px;height:${s}px;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#f3f6f9,#e7ecf1);flex:0 0 auto">${KD_AVATAR.faceSVG(p.id, s)}</div>`;
+  }
   function candCardHTML(c, pos, locked) {
     const f = pos === 'ANY' ? 'high' : fitLevel(c, pos);
     const fm = FIT_META[f];
@@ -680,12 +693,15 @@
       <div class="top" style="background:${locked ? '#9aa1ac' : fm.col}"></div>
       <div class="body">
         <div class="between" style="align-items:flex-start;margin-bottom:8px">
-          <div style="min-width:0">
+          <div class="flexc" style="gap:9px;min-width:0;align-items:flex-start">
+            ${avatarHTML(c, 42)}
+            <div style="min-width:0">
             <div class="nm">${c.name}</div>
             <div style="font:700 10.5px 'Hanken Grotesk';color:${flexCol};margin-top:3px">${c.type || c.pos}</div>
             <div class="flexc" style="gap:5px;margin-top:6px;flex-wrap:wrap">
               <span class="flexbadge" style="color:${flexCol};background:${flexBg}">${flexLabel}</span>
               <span class="chip">${c.age} yaş</span>
+            </div>
             </div>
           </div>
           <div class="ovrbox"><div class="l">GÜÇ</div><div class="v">${c.ovr}</div><div class="pot">POT ${c.pot}</div></div>
@@ -1088,7 +1104,7 @@
       </div>
       <div class="flexc" style="justify-content:flex-end;margin-top:16px;gap:12px">
         ${isOnline() ? `<div class="muted flexc" style="gap:7px;font-size:12px"><span style="width:9px;height:9px;border-radius:50%;background:${G.tactics && G.tactics.oppReady ? '#19c37d' : '#cbd1d8'}"></span>Rakip ${G.tactics && G.tactics.oppReady ? 'hazır ✓' : 'taktik yapıyor…'}</div>` : ''}
-        <button class="btn btn-green" id="ready-match" ${isOnline() && G.tactics && G.tactics.ready ? 'disabled' : ''}>${isOnline() && G.tactics && G.tactics.ready ? 'Rakip bekleniyor…' : 'Maça Hazırım →'}</button>
+        <button class="btn btn-green" id="ready-match" ${isOnline() && G.tactics && G.tactics.ready ? 'disabled' : ''}>${isOnline() && G.tactics && G.tactics.ready ? T('Rakip bekleniyor…') : T('Maça Hazırım →')}</button>
       </div>
     </div>`;
   }
@@ -1308,20 +1324,21 @@
             </div>
           </div>
           <div class="match-side">
-            <div class="between" style="margin-bottom:9px"><span class="lbl">Maç Hızı</span><span class="mono" id="spd-lbl" style="font-size:10px;color:#19c37d">1× hız</span></div>
-            <div style="display:flex;gap:6px;margin-bottom:18px" id="spd-row">
+            <div class="between" style="margin-bottom:9px"><span class="lbl">${T('Maç Hızı')}</span><span class="mono" id="spd-lbl" style="font-size:10px;color:#19c37d">1× ${T('hız')}</span></div>
+            <div style="display:flex;gap:6px;margin-bottom:12px" id="spd-row">
               ${[0.5, 1, 2, 4].map(v => `<div class="spd ${v === 1 ? 'sel' : ''}" data-spd="${v}">${v}×</div>`).join('')}
             </div>
-            <div class="lbl" style="margin-bottom:11px">Maç İstatistiği</div>
+            <div class="match-btn" id="toggle-view" style="margin-bottom:18px">${T('🎥 Görünüm: ')}<span id="view-lbl">3D</span></div>
+            <div class="lbl" style="margin-bottom:11px">${T('Maç İstatistiği')}</div>
             <div id="st-box" style="display:grid;gap:11px;margin-bottom:18px">${statBars(G.match.stats)}</div>
             <div class="events-box">
-              <div class="events-head"><span class="lbl" style="color:#3a4250">⚡ Olaylar</span></div>
-              <div id="ev-box" class="ev-list">${G.match.evHTML || '<div class="muted" style="font-size:11px;padding:8px">Henüz olay yok…</div>'}</div>
+              <div class="events-head"><span class="lbl" style="color:#3a4250">${T('⚡ Olaylar')}</span></div>
+              <div id="ev-box" class="ev-list">${G.match.evHTML || `<div class="muted" style="font-size:11px;padding:8px">${T('Henüz olay yok…')}</div>`}</div>
             </div>
-            <div class="lbl" style="margin:14px 0 9px">Maç İçi</div>
-            <div class="match-btn" id="open-tactics" style="margin-bottom:8px">⚙ Taktik & Diziliş</div>
-            <div class="match-btn green" id="open-subs" style="margin-bottom:8px">⇄ Oyuncu Değiştir <span style="background:rgba(255,255,255,.22);padding:1px 7px;border-radius:6px;font:700 11px var(--mono)" id="subs-left">${G.match.subsLeft} hak</span></div>
-            <div class="match-btn" id="open-oppview">👁 Rakip Dizilişi</div>
+            <div class="lbl" style="margin:14px 0 9px">${T('Maç İçi')}</div>
+            <div class="match-btn" id="open-tactics" style="margin-bottom:8px">${T('⚙ Taktik & Diziliş')}</div>
+            <div class="match-btn green" id="open-subs" style="margin-bottom:8px">${T('⇄ Oyuncu Değiştir')} <span style="background:rgba(255,255,255,.22);padding:1px 7px;border-radius:6px;font:700 11px var(--mono)" id="subs-left">${G.match.subsLeft} ${T('hak')}</span></div>
+            <div class="match-btn" id="open-oppview">${T('👁 Rakip Dizilişi')}</div>
           </div>
         </div>
         <div id="match-overlay"></div>
@@ -1335,13 +1352,13 @@
       return `<div class="stat-bar"><div class="top"><span>${a}</span><span class="mid">${label}</span><span>${b}</span></div>
         <div class="track" style="background:${colB}"><div style="height:100%;width:${wa}%;background:${colA}"></div></div></div>`;
     };
-    const poss = `<div class="stat-bar"><div class="top"><span>${st.possA}%</span><span class="mid">Topa Sahip Olma</span><span>${st.possB}%</span></div>
+    const poss = `<div class="stat-bar"><div class="top"><span>${st.possA}%</span><span class="mid">${T('Topa Sahip Olma')}</span><span>${st.possB}%</span></div>
       <div class="track" style="background:${G.opp.color}"><div style="height:100%;width:${st.possA}%;background:${G.me.color}"></div></div></div>`;
     const xgA = st.xgA || 0, xgB = st.xgB || 0; const xgTot = xgA + xgB || 1; const xgW = Math.round(xgA / xgTot * 100);
-    const xg = `<div class="stat-bar"><div class="top"><span>${xgA.toFixed(2)}</span><span class="mid">xG (Beklenen Gol)</span><span>${xgB.toFixed(2)}</span></div>
+    const xg = `<div class="stat-bar"><div class="top"><span>${xgA.toFixed(2)}</span><span class="mid">${T('xG (Beklenen Gol)')}</span><span>${xgB.toFixed(2)}</span></div>
       <div class="track" style="background:${G.opp.color}"><div style="height:100%;width:${xgW}%;background:${G.me.color}"></div></div></div>`;
-    return poss + bar(st.shotsA, st.shotsB, 'Şut', G.me.color, G.opp.color) + bar(st.sotA, st.sotB, 'İsabetli Şut', G.me.color, G.opp.color)
-      + xg + bar(st.cornersA || 0, st.cornersB || 0, 'Korner', G.me.color, G.opp.color) + bar(st.foulsA || 0, st.foulsB || 0, 'Faul', G.me.color, G.opp.color);
+    return poss + bar(st.shotsA, st.shotsB, T('Şut'), G.me.color, G.opp.color) + bar(st.sotA, st.sotB, T('İsabetli Şut'), G.me.color, G.opp.color)
+      + xg + bar(st.cornersA || 0, st.cornersB || 0, T('Korner'), G.me.color, G.opp.color) + bar(st.foulsA || 0, st.foulsB || 0, T('Faul'), G.me.color, G.opp.color);
   }
   function pushCommentary(text, type) {
     const box = document.getElementById('commentary'); if (!box) return;
@@ -1386,6 +1403,7 @@
       },
       onCommentary: (txt, type) => { pushCommentary(txt, type); if (online) netSend({ t: 'm-comm', txt, type }); },
       onHalftime: (kind) => { if (online) onlineHalftimeHost(kind); else openHalftime(kind); },
+      onSound: (t) => { if (window.KD_SFX) KD_SFX.play(t); },
       onEnd: (res) => onMatchEnd(res),
     });
     G.match.live = live;
@@ -1400,6 +1418,21 @@
     document.getElementById('open-tactics').onclick = () => openPanel('tactics');
     document.getElementById('open-subs').onclick = () => openPanel('subs');
     document.getElementById('open-oppview').onclick = () => openOppView();
+    setupView3D(live);
+  }
+  /* 2D ⇄ 3D görünüm toggle'ı. WebGL/THREE yoksa butonu gizler, 2D'de kalır. */
+  function setupView3D(live) {
+    const btn = document.getElementById('toggle-view'), lbl = document.getElementById('view-lbl');
+    if (!btn) return;
+    if (window._kdR3d) { try { window._kdR3d.dispose(); } catch (_) {} window._kdR3d = null; }   // önceki maçın WebGL context'ini bırak
+    const r3d = (window.KD_RENDER3D) ? KD_RENDER3D.create(live) : null;
+    window._kdR3d = r3d;
+    if (!r3d) { btn.style.display = 'none'; return; }   // 3D kurulamadı → 2D fallback
+    live.r3d = r3d;
+    let on = localStorage.getItem('kd_view3d') !== '0';   // varsayılan 3D açık
+    const apply = () => { r3d.setActive(on); if (lbl) lbl.textContent = on ? '3D' : '2D'; btn.classList.toggle('green', on); live.draw(); };
+    btn.onclick = () => { on = !on; localStorage.setItem('kd_view3d', on ? '1' : '0'); apply(); };
+    apply();
   }
   function aiInMatchSub() {
     const dec = AI.subDecision(G.opp);
@@ -1685,6 +1718,7 @@
     const ot = document.getElementById('open-tactics'); if (ot) ot.onclick = () => openPanel('tactics');
     const os = document.getElementById('open-subs'); if (os) os.onclick = () => openPanel('subs');
     const ov = document.getElementById('open-oppview'); if (ov) ov.onclick = () => openOppView();
+    setupView3D(live);
     live.draw();
   }
   function flipStats(s) {
