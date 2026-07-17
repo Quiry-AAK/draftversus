@@ -28,21 +28,60 @@ const MIME = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.pdf': 'application/pdf',
+  '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
 };
+
+/* ---------- SEO: robots.txt + sitemap.xml (domain'i istekten algılar) ---------- */
+const SITE_PAGES = ['/', '/nasil-oynanir.html', '/hakkinda.html', '/iletisim.html', '/gizlilik.html', '/kullanim-kosullari.html'];
+function siteBase(req) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+  const proto = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
+  return proto + '://' + host;
+}
 
 /* ---------- statik dosya sunumu (path traversal korumalı) ---------- */
 const server = http.createServer((req, res) => {
   try {
     if (req.url === '/healthz') { res.writeHead(200); res.end('ok'); return; }
     let urlPath = decodeURIComponent(req.url.split('?')[0]);
+    if (urlPath === '/robots.txt') {
+      res.writeHead(200, { 'Content-Type': MIME['.txt'] });
+      res.end('User-agent: *\nAllow: /\n\nSitemap: ' + siteBase(req) + '/sitemap.xml\n');
+      return;
+    }
+    if (urlPath === '/sitemap.xml') {
+      const base = siteBase(req);
+      const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + SITE_PAGES.map((p) => '  <url><loc>' + base + p + '</loc></url>').join('\n')
+        + '\n</urlset>\n';
+      res.writeHead(200, { 'Content-Type': MIME['.xml'] });
+      res.end(xml);
+      return;
+    }
     if (urlPath === '/') urlPath = '/index.html';
     const safePath = path.normalize(path.join(ROOT, urlPath));
     if (!safePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }
-    fs.stat(safePath, (err, st) => {
-      if (err || !st.isFile()) { res.writeHead(404); res.end('Not found'); return; }
-      const ext = path.extname(safePath).toLowerCase();
+    const serveFile = (fp) => {
+      const ext = path.extname(fp).toLowerCase();
       res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-      fs.createReadStream(safePath).pipe(res);
+      fs.createReadStream(fp).pipe(res);
+    };
+    fs.stat(safePath, (err, st) => {
+      if (err || !st.isFile()) {
+        // temiz URL: /gizlilik → gizlilik.html
+        if (!path.extname(safePath)) {
+          const alt = safePath + '.html';
+          fs.stat(alt, (e2, s2) => {
+            if (e2 || !s2.isFile()) { res.writeHead(404); res.end('Not found'); return; }
+            serveFile(alt);
+          });
+          return;
+        }
+        res.writeHead(404); res.end('Not found'); return;
+      }
+      serveFile(safePath);
     });
   } catch (e) {
     res.writeHead(500); res.end('Server error');

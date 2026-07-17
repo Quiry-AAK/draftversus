@@ -377,3 +377,18 @@ button { font-family: inherit; }
   .lobby-grid { grid-template-columns: 1fr; }
   .panel-body { grid-template-columns: 1fr; }
 }
+
+/* ---- Site footer / reklam alanı / çerez bildirimi ---- */
+#ad-slot { display: none; align-items: center; justify-content: center; padding: 14px 10px 2px; }
+.site-footer { padding: 16px 24px 26px; text-align: center; font: 600 12px 'Hanken Grotesk'; color: var(--muted2); }
+.site-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
+.site-footer a { color: var(--muted); text-decoration: none; }
+.site-footer a:hover { color: var(--green-d); }
+.site-footer .cop { margin-top: 9px; color: var(--faint); font-weight: 500; }
+#cookie-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 90;
+  display: flex; align-items: center; gap: 14px; background: #14181f; color: #e8eaee; padding: 11px 16px;
+  border-radius: 12px; font: 600 12px 'Hanken Grotesk'; box-shadow: 0 16px 40px -18px rgba(0,0,0,.55);
+  max-width: calc(100vw - 28px); }
+#cookie-bar a { color: #19c37d; }
+#cookie-bar button { border: none; border-radius: 8px; background: #19c37d; color: #fff;
+  font: 700 12px 'Hanken Grotesk'; padding: 7px 14px; cursor: pointer; white-space: nowrap; }

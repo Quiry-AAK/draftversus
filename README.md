@@ -41,6 +41,28 @@ Nginx/Caddy ile ters proxy yaparken `/ws` için WebSocket upgrade başlıkların
 - **VPS planı**: yukarıdaki "Düz VPS" adımları + PM2 ile çalışır (WebSocket destekli).
 - **Paylaşımlı Node hosting**: kalıcı WebSocket genelde desteklenmez → online maç çalışmayabilir. Bu durumda yalnızca AI modu güvenlidir; online sunucuyu Coolify/VPS'te tut.
 
+## Yayın kurulumu — Analytics · Adsterra · Search Console
+
+Tüm ID'ler **tek dosyada**: [`js/config.js`](js/config.js). Boş bırakılan özellik kendini kapatır.
+
+### 1) Google Analytics (GA4)
+1. [analytics.google.com](https://analytics.google.com) → mülk oluştur → **Web** veri akışı ekle (site domainin).
+2. **Ölçüm Kimliği**'ni (G-XXXXXXXXXX) kopyala → `js/config.js` → `GA_ID`'ye yapıştır.
+3. Ekran geçişleri (`/#home`, `/#match`…) otomatik page_view olarak; `room_created`, `room_joined`, `series_end` özel olay olarak gider.
+
+### 2) Adsterra
+1. [adsterra.com](https://adsterra.com) → Publisher hesabı → **Websites → Add website** (site onayı için alt sayfalar + gizlilik politikası hazır).
+2. İki ad unit oluştur: **Banner 728x90** ve **Banner 320x50** → verilen koddaki `atOptions.key` değerlerini `js/config.js` → `ADSTERRA.banner728` / `banner320`'ye yapıştır.
+3. Banner yalnızca menü/ara ekranlarında görünür (home, online, lobi, devre arası, sonuç); **maç/draft sırasında gösterilmez**. İstersen Social Bar script src'sini `socialBarSrc`'ye ekleyebilirsin (daha agresif format, varsayılan kapalı).
+
+### 3) Search Console
+1. [search.google.com/search-console](https://search.google.com/search-console) → **URL öneki** ile domaini ekle.
+2. Doğrulama: **HTML etiketi** yöntemini seç → verilen `content="..."` kodunu `index.html` içindeki `google-site-verification` meta'sına yapıştır → deploy → Doğrula.
+3. Doğrulama sonrası **Site Haritaları** bölümüne `sitemap.xml` gönder (sunucu `/sitemap.xml` ve `/robots.txt`'yi domaine göre otomatik üretir).
+
+### Ek sayfalar
+`nasil-oynanir.html` · `hakkinda.html` · `iletisim.html` · `gizlilik.html` · `kullanim-kosullari.html` — footer'dan bağlı; temiz URL de çalışır (`/gizlilik` → `gizlilik.html`).
+
 ## Mimari
 
 - `server.js` — http statik + `ws` oda yöneticisi (sadece relay; oyun mantığı istemcide).

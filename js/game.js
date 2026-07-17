@@ -134,6 +134,8 @@
       morph(root, screenHTML());
     }
     bindScreen();
+    if (window.KD_ANALYTICS) KD_ANALYTICS.screen(G.screen);
+    if (window.KD_ADS) KD_ADS.onScreen(G.screen);
   }
   function appbar() {
     const langBtn = `<button class="btn btn-ghost" id="lang-btn" style="padding:7px 11px;font-size:12px;font-weight:800">${(window.KD_I18N ? KD_I18N.lang() : 'tr').toUpperCase()}</button>`;
@@ -365,9 +367,9 @@
      ============================================================ */
   function onNetMessage(m) {
     switch (m.t) {
-      case 'created': G.online.status = 'hosting'; G.online.code = m.code; if (G.screen === 'online') render(); return;
+      case 'created': G.online.status = 'hosting'; G.online.code = m.code; if (window.KD_ANALYTICS) KD_ANALYTICS.event('room_created'); if (G.screen === 'online') render(); return;
       case 'joined': G.online.status = 'joined-wait'; G.online.code = m.code; G.online.hostConfig = m.config;
-        G.online.oppName = (m.peer && m.peer.name) || 'Rakip'; if (G.screen === 'online') render(); return;
+        G.online.oppName = (m.peer && m.peer.name) || 'Rakip'; if (window.KD_ANALYTICS) KD_ANALYTICS.event('room_joined'); if (G.screen === 'online') render(); return;
       case 'peer-joined': G.online.peer = m.profile || { name: 'Oyuncu' }; if (G.screen === 'online') render(); return;
       case 'peer-left': handlePeerLeft(m); return;
       case 'net-down': handlePeerLeft({ down: true }); return;
@@ -1948,7 +1950,11 @@
   /* ============================================================
      7 · SERİ SONUCU
      ============================================================ */
-  function goResult() { if (G.match.live) G.match.live.stop(); G.screen = 'result'; render(); }
+  function goResult() {
+    if (G.match.live) G.match.live.stop();
+    if (window.KD_ANALYTICS && G.series) KD_ANALYTICS.event('series_end', { mode: G.mode, won: G.series.winsA > G.series.winsB ? 1 : 0, format: G.series.format });
+    G.screen = 'result'; render();
+  }
   function resultHTML() {
     const s = G.series;
     const winner = s.winsA > s.winsB ? G.me : G.opp;

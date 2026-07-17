@@ -1,0 +1,19 @@
+/* ============================================================
+   DraftVersus — statik içerik sayfaları (hakkında, gizlilik…)
+   styles.css üzerine gelir; sadece okuma odaklı ekler.
+   ============================================================ */
+body.static-page { user-select: text; -webkit-user-select: text; }
+.page-wrap { max-width: 840px; width: 100%; margin: 0 auto; padding: 30px 22px 50px; flex: 1; }
+.page-wrap h1 { font-family: var(--arch); font-weight: 800; font-size: 28px; letter-spacing: -.02em; margin: 6px 0 18px; }
+.page-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 28px 32px;
+  box-shadow: 0 10px 30px -22px rgba(20,24,31,.35); font-size: 14.5px; line-height: 1.7; color: #2a303a; }
+.page-card h2 { font-family: var(--arch); font-weight: 800; font-size: 17px; letter-spacing: -.01em; margin: 26px 0 8px; }
+.page-card h2:first-child { margin-top: 0; }
+.page-card p { margin: 0 0 12px; }
+.page-card ul, .page-card ol { margin: 0 0 12px; padding-left: 22px; }
+.page-card li { margin-bottom: 6px; }
+.page-card a { color: var(--green-d); }
+.page-card .note { background: #fbfcfd; border: 1px solid var(--line2); border-radius: 11px; padding: 12px 15px;
+  font-size: 13px; color: var(--muted); }
+.page-cta { display: inline-block; text-decoration: none; margin-top: 6px; }
+@media (max-width: 640px) { .page-card { padding: 22px 18px; } }

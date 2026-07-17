@@ -3,11 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DraftVersus</title>
+  <title>DraftVersus — Online Futbol Draft &amp; Taktik Düellosu</title>
+  <meta name="description" content="DraftVersus: tarayıcıda ücretsiz futbol draft oyunu. Kadronu kur, rakibinden oyuncu çal, taktiğini seç ve maçı canlı izle. Yapay zekâya karşı ya da arkadaşınla online 1v1 oyna — indirme yok, üyelik yok." />
+  <meta name="theme-color" content="#19c37d" />
+  <!-- Search Console doğrulaması: "HTML etiketi" yöntemini seçip verilen kodu content içine yapıştır -->
+  <meta name="google-site-verification" content="" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/styles.css" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="DraftVersus" />
+  <meta property="og:title" content="DraftVersus — Online Futbol Draft &amp; Taktik Düellosu" />
+  <meta property="og:description" content="Kadronu kur, rakibinden oyuncu çal, taktiğini seç ve maçı canlı izle. Ücretsiz, tarayıcıda, online 1v1." />
+  <meta name="twitter:card" content="summary" />
+  <script>
+    /* canonical + og:url — hangi domainde yayındaysa ona göre otomatik */
+    (function () {
+      if (location.protocol.indexOf('http') !== 0) return;
+      var u = location.origin + '/';
+      var l = document.createElement('link'); l.rel = 'canonical'; l.href = u; document.head.appendChild(l);
+      var m = document.createElement('meta'); m.setAttribute('property', 'og:url'); m.content = u; document.head.appendChild(m);
+    })();
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "DraftVersus",
+    "description": "Tarayıcıda ücretsiz futbol draft ve taktik düellosu: kadro kur, oyuncu çal, taktik seç, maçı canlı izle. Yapay zekâya karşı veya online 1v1.",
+    "genre": "Sports",
+    "playMode": ["SinglePlayer", "MultiPlayer"],
+    "applicationCategory": "Game",
+    "operatingSystem": "Web",
+    "inLanguage": ["tr", "en"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TRY" }
+  }
+  </script>
 </head>
 <body>
   <div id="app"></div>
+  <noscript>
+    <div style="max-width:640px;margin:60px auto;font-family:sans-serif;text-align:center">
+      <h1>DraftVersus</h1>
+      <p>Ücretsiz online futbol draft ve taktik düellosu. Oynamak için JavaScript'i etkinleştirmen gerekiyor.</p>
+      <p><a href="nasil-oynanir.html">Nasıl oynanır?</a> · <a href="hakkinda.html">Hakkında</a> · <a href="iletisim.html">İletişim</a></p>
+    </div>
+  </noscript>
+  <div id="ad-slot"></div>
+  <footer class="site-footer">
+    <nav>
+      <a href="nasil-oynanir.html">Nasıl Oynanır</a>
+      <a href="hakkinda.html">Hakkında</a>
+      <a href="iletisim.html">İletişim</a>
+      <a href="gizlilik.html">Gizlilik</a>
+      <a href="kullanim-kosullari.html">Kullanım Koşulları</a>
+    </nav>
+    <div class="cop">© 2026 DraftVersus — tarayıcıda ücretsiz futbol draft oyunu.</div>
+  </footer>
+  <script>window.KD_GAME_PAGE = true;</script>
+  <script src="js/config.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/ads.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/data.js"></script>
   <script src="js/avatar.js"></script>
@@ -17,5 +72,6 @@
   <script src="js/render3d.js"></script>
   <script src="js/net.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/consent.js"></script>
 </body>
 </html>
