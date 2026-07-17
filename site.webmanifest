@@ -1,0 +1,18 @@
+{
+  "name": "DraftVersus — Futbol Draft & Taktik Düellosu",
+  "short_name": "DraftVersus",
+  "description": "Tarayıcıda ücretsiz futbol draft ve taktik düellosu. Kadronu kur, oyuncu çal, taktiğini seç, maçı canlı izle.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1217",
+  "theme_color": "#19c37d",
+  "lang": "tr",
+  "categories": ["games", "sports"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

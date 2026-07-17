@@ -30,6 +30,7 @@ const MIME = {
   '.pdf': 'application/pdf',
   '.txt': 'text/plain; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 /* ---------- SEO: robots.txt + sitemap.xml (domain'i istekten algılar) ---------- */
@@ -52,9 +53,12 @@ const server = http.createServer((req, res) => {
     }
     if (urlPath === '/sitemap.xml') {
       const base = siteBase(req);
+      const lastmod = new Date().toISOString().slice(0, 10);
       const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
         + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + SITE_PAGES.map((p) => '  <url><loc>' + base + p + '</loc></url>').join('\n')
+        + SITE_PAGES.map((p) => '  <url><loc>' + base + p + '</loc><lastmod>' + lastmod
+            + '</lastmod><changefreq>' + (p === '/' ? 'weekly' : 'monthly')
+            + '</changefreq><priority>' + (p === '/' ? '1.0' : '0.7') + '</priority></url>').join('\n')
         + '\n</urlset>\n';
       res.writeHead(200, { 'Content-Type': MIME['.xml'] });
       res.end(xml);
@@ -63,10 +67,17 @@ const server = http.createServer((req, res) => {
     if (urlPath === '/') urlPath = '/index.html';
     const safePath = path.normalize(path.join(ROOT, urlPath));
     if (!safePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }
-    const serveFile = (fp) => {
+    const serveFile = (fp, code) => {
       const ext = path.extname(fp).toLowerCase();
-      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+      res.writeHead(code || 200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
       fs.createReadStream(fp).pipe(res);
+    };
+    const notFound = () => {
+      const p404 = path.join(ROOT, '404.html');
+      fs.stat(p404, (e, s) => {
+        if (!e && s.isFile()) { serveFile(p404, 404); return; }
+        res.writeHead(404); res.end('Not found');
+      });
     };
     fs.stat(safePath, (err, st) => {
       if (err || !st.isFile()) {
@@ -74,12 +85,12 @@ const server = http.createServer((req, res) => {
         if (!path.extname(safePath)) {
           const alt = safePath + '.html';
           fs.stat(alt, (e2, s2) => {
-            if (e2 || !s2.isFile()) { res.writeHead(404); res.end('Not found'); return; }
+            if (e2 || !s2.isFile()) { notFound(); return; }
             serveFile(alt);
           });
           return;
         }
-        res.writeHead(404); res.end('Not found'); return;
+        notFound(); return;
       }
       serveFile(safePath);
     });
