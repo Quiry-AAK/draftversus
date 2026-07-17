@@ -210,6 +210,17 @@
           </div>
         </div>
       </div>
+      <section class="home-intro">
+        <h2>DraftVersus nedir?</h2>
+        <p class="lead">Tarayıcıda oynanan ücretsiz futbol draft ve taktik düellosu. Kadronu kur, rakibinden oyuncu çal, taktiğini seç ve maçı canlı izle — indirme yok, üyelik yok.</p>
+        <div class="home-feats">
+          <div class="home-feat"><div class="ico">⚡</div><h3>Draft & Çalma</h3><p>Sınırlı havuzdan kadronu kur; rakibinin yıldızını çal, kendininkini koru.</p></div>
+          <div class="home-feat"><div class="ico">♟️</div><h3>Taktik Düellosu</h3><p>Diziliş, oyun felsefesi, pres ve oyuncu görevlerini ayarla — rakibin taktiği gizli.</p></div>
+          <div class="home-feat"><div class="ico">📺</div><h3>Canlı Maç</h3><p>Maçı 2D/3D gerçek zamanlı izle; xG, şut, sahip olma ve baskımetre canlı.</p></div>
+          <div class="home-feat"><div class="ico">🌐</div><h3>Online 1v1</h3><p>Oda kur, 4 haneli kodu paylaş, arkadaşınla gerçek zamanlı düello yap.</p></div>
+        </div>
+        <div class="more"><a href="nasil-oynanir.html">Nasıl oynanır? Ayrıntılı rehber →</a></div>
+      </section>
     </div>`;
   }
   function bindHome() {
@@ -1891,7 +1902,7 @@
           <div class="flexc" style="gap:11px"><div class="muted" style="font-size:12px">Sıradaki: Maç ${s.matchNo + 1}</div><div class="flexc" style="gap:7px;background:#14181f;color:#fff;border-radius:10px;padding:8px 14px;font-family:var(--arch);font-weight:800;font-size:13px"><span style="width:7px;height:7px;border-radius:50%;background:#e5484d;animation:livepulse 1.4s ease-in-out infinite"></span>MAÇ ${s.matchNo + 1}</div></div>
         </div>
         <div style="padding:22px 24px;background:#fbfcfd">
-          <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-bottom:20px">
+          <div class="resp-2col" style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-bottom:20px">
             <div class="card" style="overflow:hidden">
               <div class="between" style="padding:13px 16px;border-bottom:1px solid var(--line2)"><div style="font-family:var(--arch);font-weight:800;font-size:15px">Maç ${s.matchNo}: Reyting & Gelişim</div><div class="muted" style="font:600 11px 'Hanken Grotesk'"><span style="color:#9aa1ac">reyting</span> · <span style="color:#13a76a">▲</span> <span style="color:#e5484d">▼</span> güç</div></div>
               <div class="dev-grid">${rows}</div>
@@ -1992,7 +2003,7 @@
             </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1.15fr 1fr;border-top:1px solid var(--line2)">
+        <div class="resp-2col" style="display:grid;grid-template-columns:1.15fr 1fr;border-top:1px solid var(--line2)">
           <div style="padding:24px 26px;border-right:1px solid var(--line2)">
             <div class="label" style="margin-bottom:14px">Maç Maç</div>
             <div style="display:grid;gap:9px">${matches}</div>

@@ -399,3 +399,56 @@ body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
 #cookie-bar a { color: #19c37d; }
 #cookie-bar button { border: none; border-radius: 8px; background: #19c37d; color: #fff;
   font: 700 12px 'Hanken Grotesk'; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+
+/* ---- Ana sayfa SEO tanıtım şeridi ---- */
+.home-intro { max-width: 1040px; margin: 30px auto 0; padding: 0 4px; }
+.home-intro h2 { font-family: var(--arch); font-weight: 800; font-size: 20px; letter-spacing: -.02em; text-align: center; margin: 0 0 6px; }
+.home-intro .lead { text-align: center; color: var(--muted); font-size: 14px; line-height: 1.6; max-width: 620px; margin: 0 auto 22px; }
+.home-feats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.home-feat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 15px;
+  box-shadow: 0 10px 30px -24px rgba(20,24,31,.4); }
+.home-feat .ico { width: 34px; height: 34px; border-radius: 9px; background: #e7f8f0; color: var(--green-d);
+  display: flex; align-items: center; justify-content: center; font-size: 17px; margin-bottom: 10px; }
+.home-feat h3 { font-family: var(--arch); font-weight: 800; font-size: 14.5px; margin: 0 0 4px; }
+.home-feat p { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0; }
+.home-intro .more { text-align: center; margin-top: 20px; }
+.home-intro .more a { color: var(--green-d); font-weight: 700; font-size: 13.5px; text-decoration: none; }
+.home-intro .more a:hover { text-decoration: underline; }
+
+/* ============================================================
+   MOBİL (telefon) — dar ekran düzeltmeleri
+   ============================================================ */
+@media (max-width: 600px) {
+  .screen { padding: 18px 14px 40px; }
+
+  /* Düello: iki sahayı alt alta koy — jetonlar sığsın, üst üste binmesin */
+  .duello-grid { grid-template-columns: 1fr; }
+  .duello-side.bd { border-right: none; border-bottom: 1px solid var(--line2); }
+
+  /* Skorboard: mobilde sığdır — deplasman takımı kırpılmasın */
+  .scoreboard { padding: 11px 12px; }
+  .scoreboard .score { font-size: 26px; }
+  .scoreboard .nm { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scoreboard .sub { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scoreboard .sw { width: 20px; height: 20px; flex-shrink: 0; }
+  .scoreboard > .flexc { min-width: 0; gap: 8px !important; }
+  .scoreboard > .flexc:nth-child(2) { margin: 0 7px !important; }
+  .live-badge { padding: 3px 7px; font-size: 9px; }
+
+  /* Gelişim listesi ve 2 sütunlu ara/sonuç grid'leri tek sütuna */
+  .dev-grid { grid-template-columns: 1fr; }
+  .resp-2col { grid-template-columns: 1fr !important; }
+
+  /* Sonuç ekranı kahraman başlığı taşmasın */
+  .winner-hero { padding: 34px 18px 28px; }
+
+  /* Çerez barı: tam genişlik, kompakt */
+  #cookie-bar { left: 8px; right: 8px; bottom: 10px; transform: none; max-width: none;
+    gap: 10px; padding: 10px 13px; font-size: 11.5px; }
+
+  /* Ana sayfa tanıtım kartları: 2'li grid */
+  .home-feats { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 359px) {
+  .home-feats { grid-template-columns: 1fr; }
+}
