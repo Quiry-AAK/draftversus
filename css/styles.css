@@ -379,7 +379,14 @@ button { font-family: inherit; }
 }
 
 /* ---- Site footer / reklam alanı / çerez bildirimi ---- */
-#ad-slot { display: none; align-items: center; justify-content: center; padding: 14px 10px 2px; }
+#ad-slot { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  align-items: center; justify-content: center; padding: 7px 10px;
+  background: rgba(255,255,255,.94); border-top: 1px solid var(--line);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+/* banner açıkken içerik ve çerez barı bannerın altında kalmasın */
+body.has-ad #app { padding-bottom: calc(var(--ad-h, 90px) + 16px); }
+body.has-ad #cookie-bar { bottom: calc(var(--ad-h, 90px) + 26px); }
+body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
 .site-footer { padding: 16px 24px 26px; text-align: center; font: 600 12px 'Hanken Grotesk'; color: var(--muted2); }
 .site-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
 .site-footer a { color: var(--muted); text-decoration: none; }

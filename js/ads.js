@@ -35,6 +35,8 @@
     ifr.style.cssText = 'border:0;overflow:hidden;display:block;max-width:100%';
     el.appendChild(ifr);
     el.style.display = 'flex';
+    document.body.classList.add('has-ad');
+    document.body.style.setProperty('--ad-h', b.h + 'px');
     const doc = ifr.contentWindow.document;
     doc.open();
     doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;display:flex;justify-content:center">'
@@ -50,6 +52,7 @@
     if (!el) return;
     el.innerHTML = '';
     el.style.display = 'none';
+    document.body.classList.remove('has-ad');
     active = false;
   }
 
