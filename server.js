@@ -53,10 +53,15 @@ const server = http.createServer((req, res) => {
     }
     if (urlPath === '/sitemap.xml') {
       const base = siteBase(req);
-      const lastmod = new Date().toISOString().slice(0, 10);
+      const modOf = (p) => {
+        // gerçek dosya değişim tarihi — her istekte "bugün" demek Google'a yanlış sinyal olur
+        const f = p === '/' ? 'index.html' : p.slice(1);
+        try { return fs.statSync(path.join(ROOT, f)).mtime.toISOString().slice(0, 10); }
+        catch (_) { return new Date().toISOString().slice(0, 10); }
+      };
       const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
         + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + SITE_PAGES.map((p) => '  <url><loc>' + base + p + '</loc><lastmod>' + lastmod
+        + SITE_PAGES.map((p) => '  <url><loc>' + base + p + '</loc><lastmod>' + modOf(p)
             + '</lastmod><changefreq>' + (p === '/' ? 'weekly' : 'monthly')
             + '</changefreq><priority>' + (p === '/' ? '1.0' : '0.7') + '</priority></url>').join('\n')
         + '\n</urlset>\n';

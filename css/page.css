@@ -16,4 +16,6 @@ body.static-page { user-select: text; -webkit-user-select: text; }
 .page-card .note { background: #fbfcfd; border: 1px solid var(--line2); border-radius: 11px; padding: 12px 15px;
   font-size: 13px; color: var(--muted); }
 .page-cta { display: inline-block; text-decoration: none; margin-top: 6px; }
+.guide-shot { display: block; width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 12px; margin: 10px 0 18px; box-shadow: 0 12px 32px -22px rgba(20,24,31,.45); }
 @media (max-width: 640px) { .page-card { padding: 22px 18px; } }
