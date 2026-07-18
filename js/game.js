@@ -14,6 +14,18 @@
   function isOnline() { return G && G.mode === 'online'; }
   function amHost() { return NET && NET.isHost(); }
   function netSend(d) { if (NET) NET.send(d); }
+  /* Ağdan gelen serbest metinler DOM'a (innerHTML) yazılmadan önce temizlenir —
+     manipüle edilmiş bir rakip istemcisinden XSS'i engeller. */
+  function cleanText(s, max) { return String(s == null ? '' : s).replace(/[<>&"'`]/g, '').slice(0, max || 120); }
+  function cleanObjStrings(o, max) {
+    if (o && typeof o === 'object') {
+      for (const k in o) {
+        if (typeof o[k] === 'string') o[k] = cleanText(o[k], max);
+        else if (o[k] && typeof o[k] === 'object') cleanObjStrings(o[k], max);
+      }
+    }
+    return o;
+  }
   /* Bir kulübü ağ üzerinden taşımak için sadeleştir (oyuncu nesneleri düz veri). */
   function serializeClub(club) {
     const idsOf = arr => arr.map(p => p ? p.id : null);
@@ -25,6 +37,8 @@
   }
   /* Ağdan gelen kulübü, oyuncu nesnelerini paylaşacak şekilde yeniden kur. */
   function deserializeClub(s) {
+    s.name = cleanText(s.name, 22);
+    s.squad.forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); });
     const byId = {}; s.squad.forEach(p => byId[p.id] = p);
     const club = { name: s.name, color: s.color, side: s.side,
       formation: s.formation, philosophy: s.philosophy, mentality: s.mentality,
@@ -380,8 +394,8 @@
     switch (m.t) {
       case 'created': G.online.status = 'hosting'; G.online.code = m.code; if (window.KD_ANALYTICS) KD_ANALYTICS.event('room_created'); if (G.screen === 'online') render(); return;
       case 'joined': G.online.status = 'joined-wait'; G.online.code = m.code; G.online.hostConfig = m.config;
-        G.online.oppName = (m.peer && m.peer.name) || 'Rakip'; if (window.KD_ANALYTICS) KD_ANALYTICS.event('room_joined'); if (G.screen === 'online') render(); return;
-      case 'peer-joined': G.online.peer = m.profile || { name: 'Oyuncu' }; if (G.screen === 'online') render(); return;
+        G.online.oppName = cleanText((m.peer && m.peer.name) || 'Rakip', 22); if (window.KD_ANALYTICS) KD_ANALYTICS.event('room_joined'); if (G.screen === 'online') render(); return;
+      case 'peer-joined': G.online.peer = m.profile || { name: 'Oyuncu' }; G.online.peer.name = cleanText(G.online.peer.name || 'Oyuncu', 22); if (G.screen === 'online') render(); return;
       case 'peer-left': handlePeerLeft(m); return;
       case 'net-down': handlePeerLeft({ down: true }); return;
       case 'error': G.online.status = 'error'; G.online.msg = m.msg || 'Hata'; if (G.screen === 'online') render(); else toast(m.msg || 'Bağlantı hatası'); return;
@@ -401,7 +415,11 @@
   function onGameNet(m) {
     const d = G.draft;
     switch (m.t) {
-      case 'start': startOnlineSeriesGuest(m); break;
+      case 'start':
+        if (m.host) m.host.name = cleanText(m.host.name, 22);
+        if (m.guest) m.guest.name = cleanText(m.guest.name, 22);
+        (m.pool || []).forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); });
+        startOnlineSeriesGuest(m); break;
       case 'd-formation': if (G.opp) G.opp.formation = m.f; if (G.screen === 'draft') render(); break;
       case 'd-open-pick': {
         const opener = G.draftPool.find(p => p.id === m.id);
@@ -427,8 +445,8 @@
       case 'm-tactic': if (amHost() && m.club) { G.opp = deserializeClub(m.club); if (G.match && G.match.live) G.match.live.refreshStrength(); } break;
       case 'm-frame': applyGuestFrame(m); break;
       case 'm-update': applyGuestUpdate(m); break;
-      case 'm-event': guestEvent(m.ev); break;
-      case 'm-comm': pushCommentary(m.txt, m.type); if (window.KD_SFX) { if (m.type === 'goal') { KD_SFX.play('net'); KD_SFX.play('goal'); } else { const mp = { shot: 'kick', save: 'save', foul: 'whistle', set: 'whistle' }; if (mp[m.type]) KD_SFX.play(mp[m.type]); } } break;
+      case 'm-event': guestEvent(cleanObjStrings(m.ev, 160)); break;
+      case 'm-comm': pushCommentary(cleanText(m.txt, 200), m.type); if (window.KD_SFX) { if (m.type === 'goal') { KD_SFX.play('net'); KD_SFX.play('goal'); } else { const mp = { shot: 'kick', save: 'save', foul: 'whistle', set: 'whistle' }; if (mp[m.type]) KD_SFX.play(mp[m.type]); } } break;
       case 'm-halftime': guestHalftime(m.kind); break;
       case 'ht-ready': hostHalftimeReady(); break;
       case 'ht-resume': guestResume(); break;
