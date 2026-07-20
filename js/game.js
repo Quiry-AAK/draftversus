@@ -452,6 +452,8 @@
       case 'ht-resume': guestResume(); break;
       case 'm-result': applyGuestResult(m); break;
       case 'between-ready': G._betweenReadyFor = G.series.matchNo; if (G.between) { G.between.oppReady = true; maybeAdvanceBetween(); } break;
+      case 'png': netSend({ t: 'pong', c: m.c }); break;                 // host: gecikme ölçümünü yankıla
+      case 'pong': if (G.match) G.match.rtt = Date.now() - m.c; break;    // guest: RTT = şimdi − gönderim
     }
   }
 
@@ -1737,20 +1739,51 @@
       fl: (live.flash && live.t < (live._flashUntil || 0)) ? { txt: live.flash.txt, col: live.flash.col } : null,
       ph: live.phase });
   }
-  /* guest: motoru çalıştırmaz; gelen kareleri çizer */
+  /* guest: motoru çalıştırmaz; host'un kareleri arasında interpolasyon yaparak
+     60fps pürüzsüz render eder (~120ms tampon jitter'ı gizler). */
+  const GUEST_INTERP_MS = 120;
+  function nowMs() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
   function bindGuestMatch(cv) {
     const live = new LiveMatch(cv, G.me, G.opp, {});   // A = ben(guest), B = rakip(host)
     try { live.stop(); } catch (_) {}
     live.running = false; live.start = function () {};   // guest motoru asla başlatmaz
     G.match.live = live; G.match.guest = true;
+    G.match.buf = []; G.match.rtt = null;
+    G.match.interp = (typeof requestAnimationFrame === 'function');   // ortam desteklemezse anlık çizime düş
     window.scrollTo(0, 0);
     document.querySelectorAll('[data-spd]').forEach(b => { b.style.opacity = '.4'; b.style.pointerEvents = 'none'; });
-    const sl = document.getElementById('spd-lbl'); if (sl) sl.textContent = 'host kontrolünde';
+    const sl = document.getElementById('spd-lbl'); if (sl) sl.innerHTML = 'host kontrolünde · <span id="net-quality">canlı</span>';
     const ot = document.getElementById('open-tactics'); if (ot) ot.onclick = () => openPanel('tactics');
     const os = document.getElementById('open-subs'); if (os) os.onclick = () => openPanel('subs');
     const ov = document.getElementById('open-oppview'); if (ov) ov.onclick = () => openOppView();
     setupView3D(live);
     live.draw();
+    G.match.renderGen = (G.match.renderGen || 0) + 1;   // önceki döngü(ler) kendini durdursun
+    if (G.match.interp) { startGuestRender(G.match.renderGen); startGuestPing(); }
+  }
+  function startGuestRender(gen) {
+    const step = () => {
+      if (!G.match || !G.match.guest || G.screen !== 'match' || G.match.renderGen !== gen) { return; }
+      try { renderGuestInterp(); } catch (_) {}
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function startGuestPing() {
+    if (G.match.pingIv) clearInterval(G.match.pingIv);
+    G.match.pingIv = setInterval(() => {
+      if (!G.match || !G.match.guest || G.screen !== 'match') { clearInterval(G.match.pingIv); G.match.pingIv = null; return; }
+      netSend({ t: 'png', c: Date.now() });
+    }, 2000);
+  }
+  function updateGuestQuality() {
+    const el = document.getElementById('net-quality'); if (!el) return;
+    const buf = G.match.buf; const last = (buf && buf.length) ? buf[buf.length - 1].rt : 0;
+    const gap = nowMs() - last, rtt = G.match.rtt;
+    let col = '#19c37d';
+    if (gap > 600) col = '#e5484d'; else if (gap > 260 || (rtt != null && rtt > 220)) col = '#d9a017';
+    const label = (rtt != null) ? (Math.round(rtt) + 'ms') : 'canlı';
+    el.innerHTML = '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + col + ';margin-right:5px"></span>' + label;
   }
   function flipStats(s) {
     s = s || {};
@@ -1758,29 +1791,67 @@
       cornersA: s.cornersB, cornersB: s.cornersA, foulsA: s.foulsB, foulsB: s.foulsA,
       offsidesA: s.offsidesB, offsidesB: s.offsidesA, xgA: s.xgB, xgB: s.xgA };
   }
-  function applyGuestFrame(f) {
-    const live = G.match && G.match.live; if (!live || !G.match.guest) return;
+  /* pozisyonları (oyuncu/top/hakem) iki kare arasında ara değerleyerek yaz.
+     b === a ise interpolasyon yok (tek kare). Host koordinatı → guest aynası (W - x). */
+  function applyGuestPositions(live, a, b, alpha) {
     const W = live.W, N = live.players.length, half = N / 2;
-    for (let i = 0; i < N; i++) { const p = live.players[i]; if (p) { p.carded = false; p.sentOff = false; p.stam = 100; p.injured = false; } }
     for (let hi = 0; hi < N; hi++) {
       const p = live.players[(hi + half) % N]; if (!p) continue;
-      const x = f.P[hi * 2], y = f.P[hi * 2 + 1]; if (x <= -9000) continue;
+      const ax = a.P[hi * 2], ay = a.P[hi * 2 + 1]; if (ax <= -9000) continue;
+      let x = ax, y = ay;
+      if (b !== a) { const bx = b.P[hi * 2], by = b.P[hi * 2 + 1]; if (bx > -9000) { x = ax + (bx - ax) * alpha; y = ay + (by - ay) * alpha; } }
       p.x = W - x; p.y = y;
     }
+    const bax = a.B[0], bay = a.B[1];
+    if (b !== a) { live.ball.x = W - (bax + (b.B[0] - bax) * alpha); live.ball.y = bay + (b.B[1] - bay) * alpha; }
+    else { live.ball.x = W - bax; live.ball.y = bay; }
+    if (live.ref) {
+      const rax = a.R[0], ray = a.R[1];
+      if (b !== a) { live.ref.x = W - (rax + (b.R[0] - rax) * alpha); live.ref.y = ray + (b.R[1] - ray) * alpha; }
+      else { live.ref.x = W - rax; live.ref.y = ray; }
+    }
+  }
+  /* gelen kare: ayrık/otoriter durum (skor, kart, gol) ANINDA uygulanır (gecikmez);
+     pozisyonlar tampona alınıp render döngüsünde interpolasyonla çizilir. */
+  function applyGuestFrame(f) {
+    const live = G.match && G.match.live; if (!live || !G.match.guest) return;
+    const N = live.players.length, half = N / 2;
+    for (let i = 0; i < N; i++) { const p = live.players[i]; if (p) { p.carded = false; p.sentOff = false; p.stam = 100; p.injured = false; } }
     (f.cd || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.carded = true; });
     (f.so || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.sentOff = true; });
     (f.st || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.stam = 30; });
     (f.ij || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.injured = true; });
-    live.ball.x = W - f.B[0]; live.ball.y = f.B[1];
     live.owner = (f.O != null && f.O >= 0) ? (f.O + half) % N : null;
-    if (live.ref) { live.ref.x = W - f.R[0]; live.ref.y = f.R[1]; }
     live.a = f.sc[1]; live.b = f.sc[0];   // guest perspektifi: A = ben = host'un B'si
     live.goalFlash = f.gf ? { team: 1 - f.gf.team, name: f.gf.name } : null;
     live.flash = f.fl || null; live._flashUntil = f.fl ? (f.n + 99999) : 0;
-    live.t = f.n; live.phase = 'play';
-    live.draw();
-    if (f.ph === 'replay') drawGuestBadge(live, 'TEKRAR · GOL');
+    live.t = f.n; live.phase = 'play'; live._ph = f.ph;
     const a = document.getElementById('sb-a'), b = document.getElementById('sb-b'); if (a) a.textContent = live.a; if (b) b.textContent = live.b;
+    if (G.match.interp) {
+      G.match.buf.push({ rt: nowMs(), f });
+      const cut = nowMs() - 1000; while (G.match.buf.length > 2 && G.match.buf[0].rt < cut) G.match.buf.shift();
+    } else {   // interpolasyon desteklenmiyorsa (ör. test ortamı): anında çiz
+      applyGuestPositions(live, f, f, 0);
+      live.draw();
+      if (f.ph === 'replay') drawGuestBadge(live, 'TEKRAR · GOL');
+    }
+  }
+  /* 60fps render döngüsü: render zamanı = şimdi − 120ms; o anı saran iki kare bulunur,
+     aralarında interpolasyon yapılır. Ağ dururken en yeni kareye tutunur. */
+  function renderGuestInterp() {
+    const live = G.match && G.match.live, buf = G.match && G.match.buf;
+    if (!live || !buf || !buf.length) return;
+    const renderT = nowMs() - GUEST_INTERP_MS;
+    let i0 = -1;
+    for (let i = 0; i < buf.length; i++) { if (buf[i].rt <= renderT) i0 = i; else break; }
+    let a, b, alpha;
+    if (i0 < 0) { a = buf[0].f; b = a; alpha = 0; }                       // henüz yeterince geç değil
+    else if (i0 >= buf.length - 1) { a = buf[buf.length - 1].f; b = a; alpha = 0; }  // ağ durdu → en yeni
+    else { const f0 = buf[i0], f1 = buf[i0 + 1]; a = f0.f; b = f1.f; const span = f1.rt - f0.rt; alpha = span > 0 ? Math.min(1, Math.max(0, (renderT - f0.rt) / span)) : 0; }
+    applyGuestPositions(live, a, b, alpha);
+    live.draw();
+    if (live._ph === 'replay') drawGuestBadge(live, 'TEKRAR · GOL');
+    updateGuestQuality();
   }
   function drawGuestBadge(live, txt) {
     const ctx = live.ctx; ctx.fillStyle = 'rgba(8,12,18,.62)'; ctx.fillRect(0, 0, live.W, 40);
