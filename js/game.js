@@ -1462,9 +1462,9 @@
     window._kdR3d = r3d;
     if (!r3d) { btn.style.display = 'none'; return; }   // 3D kurulamadı → 2D fallback
     live.r3d = r3d;
-    let on = localStorage.getItem('kd_view3d') !== '0';   // varsayılan 3D açık
+    let on = false;   // maçlar her zaman 2D başlar; kullanıcı isterse 3D'ye çevirir (online/offline fark etmez)
     const apply = () => { r3d.setActive(on); if (lbl) lbl.textContent = on ? '3D' : '2D'; btn.classList.toggle('green', on); live.draw(); };
-    btn.onclick = () => { on = !on; localStorage.setItem('kd_view3d', on ? '1' : '0'); apply(); };
+    btn.onclick = () => { on = !on; apply(); };
     apply();
   }
   function aiInMatchSub() {
