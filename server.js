@@ -223,7 +223,10 @@ function peerOf(ws) {
   return ws._side === 'a' ? room.guest : room.host;
 }
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 4096 });
+/* maxPayload: çoğu relay ~1KB, ama seri başında 'start' mesajı tüm draft
+   havuzunu, 'ready' ise tam kadroyu taşır (birkaç on KB) → 64KB güvenli tavan
+   (100MB varsayılana kıyasla hâlâ bellek-bombasına kapalı). */
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 65536 });
 
 const ipConns = new Map();   // ip → açık soket sayısı
 const ipOps = new Map();     // ip → { n, t } dakikalık create/join sayacı
