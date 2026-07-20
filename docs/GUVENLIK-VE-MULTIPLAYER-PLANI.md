@@ -90,14 +90,19 @@ traefik.http.routers.<router-adı>.middlewares=dv-rl
   3. **Reconnect yok:** kopan taraf maçı kaybeder; host koparsa oda ölür.
   4. RTT/bağlantı kalitesi ölçülmüyor; kullanıcı "neden takılıyor" göremiyor.
 
-### Faz 1 — Akıcılık (istemci tarafı, sunucu değişmez) — EN YÜKSEK ETKİ/EFOR ORANI
+### Faz 1 — Akıcılık (istemci tarafı, sunucu değişmez) — ✅ TAMAMLANDI
 
-1. **Interpolation tamponu (guest):** Gelen kareleri zaman damgasıyla kuyruğa al;
-   ekranı **~100 ms geçmişte** render et, iki kare arasında lineer ara değerle.
-   → 22 Hz veriyle 60 fps pürüzsüz hareket; 100 ms'ye kadar jitter görünmez olur.
-   (Değişiklik yalnız `bindGuestMatch`/çizim katmanında; ~yarım gün.)
-2. **RTT göstergesi:** `m-frame`'deki `n` (maç saati) ile yerel saat farkından gecikme türet;
-   skorbordda küçük 🟢/🟡/🔴 nokta. Kullanıcı algısı için ucuz kazanç.
+1. ✅ **Interpolation tamponu (guest):** Gelen kareler zaman damgasıyla tampona alınır;
+   ekran **120 ms geçmişte** render edilir, iki kare arası lineer ara değerlenir (60fps).
+   Skor/kart/gol gibi ayrık durum ANINDA uygulanır (gecikmez); yalnız pozisyonlar yumuşatılır.
+   Ağ durursa en yeni kareye tutunur (extrapolasyon yok). rAF döngüsü kuşak-korumalı.
+2. ✅ **RTT göstergesi:** Guest 2 sn'de bir `png` yollar, host `pong`'lar → gerçek RTT;
+   skorbordda renkli nokta (🟢/🟡/🔴) + `ms`. Gerçek 2-istemci testinde "4ms" ölçüldü.
+
+> **Test notu:** Gerçek 2-sekme WebSocket testi bu fazı doğrularken **kritik bir regresyon**
+> yakaladı: güvenlik turunda konan `maxPayload: 4096`, seri başı `start` mesajını (draft havuzu)
+> kesip host'u düşürüyordu → **64KB'a yükseltildi** (commit 01b9f03). Online maç uçtan uca
+> çalışıyor: bağlantı, oda, draft senkron, host-otoriter maç, guest interpolation render, RTT.
 
 ### Faz 2 — Bant optimizasyonu (host + guest) 
 
