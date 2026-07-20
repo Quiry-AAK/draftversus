@@ -104,14 +104,22 @@ traefik.http.routers.<router-adı>.middlewares=dv-rl
 > kesip host'u düşürüyordu → **64KB'a yükseltildi** (commit 01b9f03). Online maç uçtan uca
 > çalışıyor: bağlantı, oda, draft senkron, host-otoriter maç, guest interpolation render, RTT.
 
-### Faz 2 — Bant optimizasyonu (host + guest) 
+### Faz 2 — Bant optimizasyonu — ✅ TAMAMLANDI (kısmi; delta işe yaramadı)
 
-3. **Delta + keyframe:** Her karede yalnız **değişen** oyuncu koordinatlarını yolla
-   (indeks+fark); her 2 saniyede bir tam **keyframe** (paket kaybı/drift sigortası).
-   → Bant %60-70 düşer. JSON kalabilir; ileride gerekirse `ArrayBuffer` (binary) ikinci adım.
-4. **Yayın frekansı 45→66 ms (15 Hz):** Interpolation varken görsel fark yok;
-   bant ve host CPU'su düşer. (Tek satır sabit.)
-5. **Görünmeyen ayrıntıyı at:** `st` (yorgun listesi) her karede değil, değişince yollansın.
+4. ✅ **Yayın frekansı 45→66 ms (15 Hz):** Guest'teki 140ms interpolasyon tamponu
+   düşük frekansı görünmez kılıyor. **Ölçülen tasarruf ~%26** (harness ölçümü:
+   7.02→5.18 KB/s, tek yön). Host CPU'su da düşüyor.
+3. ❌ **Delta + keyframe — DENENDİ, KALDIRILDI.** Bu simülasyonda oyuncular 66ms'de
+   neredeyse hep >2px oynadığından, delta `[indeks,x,y]` (3 değer) tam kare `[x,y]`
+   (2 değer) yerine indeks yükü ekleyip mesajı **büyütüyordu** (343B vs 324B, ölçüldü).
+   Eşik (>2px) de kurtarmadı (%28). Basit ve karesel daha küçük olan tam-kare korundu.
+   → Plandaki "%60-70" tahmini seyrek-hareket varsayıyordu; hızlı maç simülasyonunda geçersiz.
+5. ~~Görünmeyen ayrıntıyı at~~ — tam kare zaten küçük; gereksiz karmaşa, yapılmadı.
+
+> **Daha büyük tasarruf yolu (gerekirse):** JSON yerine **binary WS** (int16 pozisyonlar)
+> pozisyon yükünü ~yarıya indirir (metin "1180" 4 bayt → 2 bayt), 15Hz ile birlikte ~%55-60.
+> Bedeli: relay sunucusunun binary çerçeveyi de taşıması (şu an JSON-only). Küçük oyun için
+> şimdilik orantısız; ihtiyaç doğarsa ilk adım budur.
 
 ### Faz 3 — Dayanıklılık (sunucu + istemci)
 

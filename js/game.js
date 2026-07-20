@@ -1720,7 +1720,13 @@
     if (G._oppClubSerialized) G.opp = deserializeClub(G._oppClubSerialized);
     goMatch();
   }
-  function startHostStream(live) { stopHostStream(); G.match.streamIv = setInterval(() => streamFrame(live), 45); }
+  /* 15Hz yayın (önceden 22Hz). Guest'teki 140ms interpolasyon tamponu daha düşük
+     frekansı görünmez kılar → maç akıcı kalırken bant ~%26 azalır.
+     (Not: pozisyonların çoğu her karede değiştiğinden delta kodlama bu hızlı
+     simülasyonda tam kareden büyük çıkıyor — ölçüldü, kullanılmadı; daha büyük
+     tasarruf gerekirse ikili/binary WS kodlaması yolu açık.) */
+  const STREAM_MS = 66;
+  function startHostStream(live) { stopHostStream(); G.match.streamIv = setInterval(() => streamFrame(live), STREAM_MS); }
   function stopHostStream() { if (G.match && G.match.streamIv) { clearInterval(G.match.streamIv); G.match.streamIv = null; } }
   function streamFrame(live) {
     if (!live) return;
@@ -1741,7 +1747,7 @@
   }
   /* guest: motoru çalıştırmaz; host'un kareleri arasında interpolasyon yaparak
      60fps pürüzsüz render eder (~120ms tampon jitter'ı gizler). */
-  const GUEST_INTERP_MS = 120;
+  const GUEST_INTERP_MS = 140;   // 15Hz'de iki kareyi güvenle sarmalamak için tampon
   function nowMs() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
   function bindGuestMatch(cv) {
     const live = new LiveMatch(cv, G.me, G.opp, {});   // A = ben(guest), B = rakip(host)
@@ -1812,10 +1818,12 @@
     }
   }
   /* gelen kare: ayrık/otoriter durum (skor, kart, gol) ANINDA uygulanır (gecikmez);
-     pozisyonlar tampona alınıp render döngüsünde interpolasyonla çizilir. */
+     pozisyonlar delta/keyframe'den yeniden kurulup tampona alınır, render döngüsünde
+     interpolasyonla çizilir. */
   function applyGuestFrame(f) {
     const live = G.match && G.match.live; if (!live || !G.match.guest) return;
     const N = live.players.length, half = N / 2;
+    // ayrık/otoriter durum (skor, kart, gol) ANINDA uygulanır (gecikmez)
     for (let i = 0; i < N; i++) { const p = live.players[i]; if (p) { p.carded = false; p.sentOff = false; p.stam = 100; p.injured = false; } }
     (f.cd || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.carded = true; });
     (f.so || []).forEach(hi => { const p = live.players[(hi + half) % N]; if (p) p.sentOff = true; });
@@ -1827,6 +1835,7 @@
     live.flash = f.fl || null; live._flashUntil = f.fl ? (f.n + 99999) : 0;
     live.t = f.n; live.phase = 'play'; live._ph = f.ph;
     const a = document.getElementById('sb-a'), b = document.getElementById('sb-b'); if (a) a.textContent = live.a; if (b) b.textContent = live.b;
+    // pozisyonlar interpolasyon tamponuna (f her karede tam P taşır, per-mesaj sabit → kopya gerekmez)
     if (G.match.interp) {
       G.match.buf.push({ rt: nowMs(), f });
       const cut = nowMs() - 1000; while (G.match.buf.length > 2 && G.match.buf[0].rt < cut) G.match.buf.shift();
