@@ -3,6 +3,14 @@
 > Durum tespiti: 17 Temmuz 2026. Mevcut mimari: tek Node süreci; statik dosya + `/ws`
 > WebSocket relay (host-otoriter). Coolify (Traefik proxy) arkasında, draftversus.com.
 
+## Uygulama durumu (20 Tem 2026)
+
+- ✅ **Katman B (uygulama)** — WS ve HTTP sertleştirmesi **tamamlandı** (aşağıda ✅ işaretli).
+- ⏳ **Katman A (Cloudflare/DNS)** — kullanıcı tercihiyle **en sona** bırakıldı. Volumetrik
+  (L3/L4) DDoS için tek gerçek çözüm budur; uygulama katmanı bunu tam ikame edemez ama
+  L7 kötüye kullanımın büyük kısmını (flood, slowloris, brute-force) origin'de karşılıyoruz.
+- ⏳ **Coolify/Traefik rate-limit** — DNS gerektirmez, opsiyonel ek katman (aşağıda hazır etiketler).
+
 ---
 
 ## BÖLÜM 1 — DDoS / Kötüye Kullanım Koruması
@@ -27,17 +35,38 @@
 2. **Origin'i gizle:** VPS firewall'unda 80/443'ü yalnızca [Cloudflare IP aralıklarına](https://www.cloudflare.com/ips/) aç. Saldırgan origin IP'yi bilse bile doğrudan vuramaz.
 3. **VPS firewall:** 22 (SSH, tercihen sadece kendi IP'n) + 80/443 dışındaki tüm portlar kapalı. Coolify panel portu internete açık olmasın.
 
-### Katman B — Uygulama (server.js, ~1-2 saat iş) — ÖNCELİK 2
+### Katman B — Uygulama (server.js) — ✅ TAMAMLANDI
+
+**WebSocket:**
+- ✅ `maxPayload: 4096` — 4KB üstü mesaj bağlantıyı kapatır (bellek şişirme kapandı).
+- ✅ IP başına eş-zamanlı WS limiti: **4** (`cf-connecting-ip` / `x-forwarded-for` önceliğiyle).
+- ✅ Soket başına mesaj hız limiti (token bucket): **40 msj/sn, patlama 80**. Aşan soket kapatılır.
+- ✅ `join` brute-force: soket başına **5 hatalı kod → 1008 ile kapat**; IP başına dakikada 10 create/join.
+- ✅ Oda hijyeni: rakipsiz oda **10 dk**'da süpürülür; oda tavanı **500**; bağlantı tavanı 2000.
+
+**HTTP (yeni — DNS gerektirmez):**
+- ✅ IP başına HTTP hız limiti: **100 istek / 10 sn → 429** (tek sayfa yükü ~17 dosya, rahat sığar).
+- ✅ Sadece GET/HEAD; POST/PUT vb. gövde tabanlı saldırılar erkenden düşürülür.
+- ✅ Slowloris zaman aşımları: `headersTimeout 10s`, `requestTimeout 20s`, `keepAliveTimeout 15s`, `maxConnections 1200`.
+- ✅ Güvenlik başlıkları: `X-Content-Type-Options`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy`, https'te `HSTS`.
+- ✅ Gizli/iç dosya sızıntısı kapalı (`.git`, `node_modules`, `server.js`, `package.json`…).
+- ⚠️ **CSP bilinçli olarak konmadı** — Adsterra rotasyonlu alan adlarından script/iframe çektiği için katı CSP reklam gelirini bozar.
+
+**İstemci (game.js):**
+- ✅ Ağdan gelen tüm serbest metinler (rakip/oyuncu/kulüp adları, spiker, olaylar, havuz) DOM'a yazılmadan temizlenir → manipüle rakip istemcisinden **XSS kapandı**.
+
+### Katman B+ — Coolify/Traefik rate-limit (opsiyonel, DNS gerektirmez) — ÖNCELİK 2b
+
+Coolify → uygulama → **Labels** kısmına (proxy önünde ikinci bir hız katmanı):
 
 ```
-WebSocketServer({ server, path:'/ws', maxPayload: 4096 })   // relay mesajları < 1KB
+traefik.http.middlewares.dv-rl.ratelimit.average=100
+traefik.http.middlewares.dv-rl.ratelimit.period=1m
+traefik.http.middlewares.dv-rl.ratelimit.burst=50
+traefik.http.routers.<router-adı>.middlewares=dv-rl
 ```
-
-- **IP başına eş-zamanlı WS limiti:** 4 (aynı evden 2 oyuncu + tolerans). `x-forwarded-for`'un İLK IP'si (Cloudflare arkasında `cf-connecting-ip`).
-- **Soket başına mesaj hız limiti (token bucket):** 40 mesaj/sn, patlama 80. Maç yayını 22Hz olduğundan meşru trafik rahat sığar; aşan soket önce uyarılır, tekrarında kapatılır.
-- **`join` brute-force:** soket başına 5 hatalı kod → bağlantıyı kapat; IP başına dakikada 10 `create`/`join`.
-- **Oda hijyeni:** rakipsiz oda 10 dk sonra otomatik kapanır; toplam oda üst sınırı 500 (aşımda `create` reddi). Bellek sabit kalır.
-- **Yük düşürme:** `wss.clients.size > 2000` ise yeni bağlantıya `503` mantığı (öncelik mevcut maçların yaşaması).
+> `<router-adı>` Coolify'ın ürettiği router etiketiyle aynı olmalı. WS (`/ws`) uzun ömürlü tek
+> bağlantı olduğundan bu limit maçları etkilemez.
 
 ### Katman C — İzleme — ÖNCELİK 3
 

@@ -59,17 +59,61 @@ function ipOf(req) {
     || (req.socket && req.socket.remoteAddress) || '?';
 }
 
+/* ---------- güvenlik başlıkları (her yanıta) ----------
+   Not: Adsterra rotasyonlu alan adlarından script/iframe çektiği için
+   katı bir CSP reklamları bozar → CSP koymuyoruz; kırılmayan başlıklar. */
+function secHeaders(req) {
+  const h = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=()',
+  };
+  // HSTS yalnız https'te anlamlı (proxy x-forwarded-proto'ya bakar)
+  const proto = req.headers['x-forwarded-proto'];
+  if (proto === 'https') h['Strict-Transport-Security'] = 'max-age=15552000';
+  return h;
+}
+
+/* ---------- HTTP hız limiti (IP başına kayan pencere) ----------
+   İlk ziyaret ~17 dosya çeker; sonraki yüklemeler 304/cache ile ucuz.
+   Cömert: 100 istek / 10 sn (≈5 tam sayfa yükü) → aşan 429 alır. */
+const HTTP_WINDOW_MS = 10000, HTTP_MAX = 100;
+const httpHits = new Map();   // ip → { n, t }
+function httpLimited(ip) {
+  const now = Date.now();
+  let e = httpHits.get(ip);
+  if (!e || now - e.t > HTTP_WINDOW_MS) { e = { n: 0, t: now }; httpHits.set(ip, e); }
+  e.n++;
+  return e.n > HTTP_MAX;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, e] of httpHits) if (now - e.t > HTTP_WINDOW_MS) httpHits.delete(ip);
+  if (httpHits.size > 50000) httpHits.clear();
+}, 30000).unref();
+
 /* ---------- statik dosya sunumu (path traversal korumalı) ---------- */
 const server = http.createServer((req, res) => {
   try {
+    const SEC = secHeaders(req);
+    // sadece GET/HEAD servis edilir (POST/PUT vb. gövde temelli saldırıları erken kes)
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      req.destroy(); return;
+    }
+    // HTTP flood koruması (IP başına) — healthz hariç
+    if (req.url !== '/healthz' && httpLimited(ipOf(req))) {
+      res.writeHead(429, Object.assign({ 'Retry-After': '10', 'Content-Type': 'text/plain' }, SEC));
+      res.end('Too Many Requests'); return;
+    }
     if (req.url === '/healthz') {
-      res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+      res.writeHead(200, Object.assign({ 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }, SEC));
       res.end(JSON.stringify({ ok: 1, rooms: Object.keys(rooms).length, clients: wss ? wss.clients.size : 0 }));
       return;
     }
     let urlPath = decodeURIComponent(req.url.split('?')[0]);
     if (urlPath === '/robots.txt') {
-      res.writeHead(200, { 'Content-Type': MIME['.txt'], 'Cache-Control': 'public, max-age=3600' });
+      res.writeHead(200, Object.assign({ 'Content-Type': MIME['.txt'], 'Cache-Control': 'public, max-age=3600' }, SEC));
       res.end('User-agent: *\nAllow: /\n\nSitemap: ' + siteBase(req) + '/sitemap.xml\n');
       return;
     }
@@ -87,7 +131,7 @@ const server = http.createServer((req, res) => {
             + '</lastmod><changefreq>' + (p === '/' ? 'weekly' : 'monthly')
             + '</changefreq><priority>' + (p === '/' ? '1.0' : '0.7') + '</priority></url>').join('\n')
         + '\n</urlset>\n';
-      res.writeHead(200, { 'Content-Type': MIME['.xml'], 'Cache-Control': 'public, max-age=3600' });
+      res.writeHead(200, Object.assign({ 'Content-Type': MIME['.xml'], 'Cache-Control': 'public, max-age=3600' }, SEC));
       res.end(xml);
       return;
     }
@@ -105,11 +149,10 @@ const server = http.createServer((req, res) => {
     }
     const serveFile = (fp, st, code) => {
       const ext = path.extname(fp).toLowerCase();
-      const headers = {
+      const headers = Object.assign({
         'Content-Type': MIME[ext] || 'application/octet-stream',
         'Cache-Control': code === 404 ? 'no-store' : cacheControl(ext),
-        'X-Content-Type-Options': 'nosniff',
-      };
+      }, SEC);
       if (st && !code) {
         headers['Last-Modified'] = st.mtime.toUTCString();
         const ims = req.headers['if-modified-since'];
@@ -297,6 +340,16 @@ const ping = setInterval(() => {
   if (ipOps.size > 10000) ipOps.clear();   // sayaç tablosu şişmesin
 }, 30000);
 wss.on('close', () => clearInterval(ping));
+
+/* Slowloris / yavaş-istek saldırılarına karşı zaman aşımları + bağlantı tavanı.
+   (WS el sıkışması hızlı tamamlanıp yükseltildiği için bu değerlerden etkilenmez.) */
+server.headersTimeout = 10000;    // başlıkları göndermek için 10 sn
+server.requestTimeout = 20000;    // tam istek için 20 sn
+server.keepAliveTimeout = 15000;  // boşta HTTP keep-alive
+server.maxConnections = 1200;     // eş zamanlı soket sert tavanı
+server.on('clientError', (err, socket) => {
+  if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+});
 
 server.listen(PORT, () => {
   console.log(`DraftVersus çalışıyor → http://localhost:${PORT}  (WS: /ws)`);
