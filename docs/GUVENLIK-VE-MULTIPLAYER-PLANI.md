@@ -121,16 +121,23 @@ traefik.http.routers.<router-adı>.middlewares=dv-rl
 > Bedeli: relay sunucusunun binary çerçeveyi de taşıması (şu an JSON-only). Küçük oyun için
 > şimdilik orantısız; ihtiyaç doğarsa ilk adım budur.
 
-### Faz 3 — Dayanıklılık (sunucu + istemci)
+### Faz 3 — Dayanıklılık (sunucu + istemci) — ✅ TAMAMLANDI
 
-6. **Reconnect/resume:** 
-   - Sunucu: `create`/`join`'de odaya **oturum token'ı** ver (istemci `localStorage`'da tutar).
-     Taraf koptuğunda odayı hemen kapatma → **60 sn askı** (peer'a "bağlantı sorunu" göster).
-     Token'la dönen taraf aynı `side`'a oturur.
-   - Host dönünce maç kaldığı yerden akar (motor hostta zaten canlı); guest dönünce
-     sonraki keyframe ile toparlar. (~1 gün iş; en değerli dayanıklılık özelliği.)
-7. **Heartbeat sıkılaştır:** sunucu ping 30sn→10sn; istemcide 5 sn veri gelmezse
-   "bağlantı zayıf" bandı + otomatik yeniden bağlanma denemesi.
+6. ✅ **Reconnect/resume:**
+   - Sunucu: `create`/`join`'de her tarafa **resume token'ı** verilir. İstemsiz kopmada oda
+     hemen kapatılmaz → **45 sn askı** (`away` timer); peer'a `peer-away` gider (maç sürer).
+     Token'la dönen taraf aynı `side`'a oturur (`resume`→`resumed`), peer `peer-back` alır.
+     Grace dolarsa `finalizeLeave` → `peer-left`. Kötü token/dolu slot reddedilir.
+   - İstemci (net.js): kopmayı algılar, `reconnecting` yayar, token'la otomatik `resume` dener
+     (2sn aralık, 44sn pencere). Yayın kareleri kopukken biriktirilmez (bayatlar). Gönüllü
+     `leave` reconnect'i bastırır. Başarısızlıkta `reconnect-failed` → maç sonlanır.
+   - UI: yıkıcı olmayan üst şerit (`.net-banner`) — "yeniden bağlanılıyor…" / "rakip bekleniyor…".
+   - Not: motor host'un sekmesinde yaşadığından geçici WS kopmalarını (wifi/proxy blip, sunucu
+     kısa restart) kurtarır; **sekme kapanmasını** değil (o durumda motor kaybolur).
+   - **Test:** gerçek WS protokol testi (drop→peer-away→resume→peer-back→relay, kötü token reddi)
+     ve tarayıcıda istemci oto-reconnect (created→reconnecting→resumed, banner, gönüllü-leave bastırma).
+7. ⏳ **Heartbeat sıkılaştır** — mevcut 30sn ping yeterli çalışıyor; istemci reconnect zaten
+   kopmayı hızlı yakalıyor. Gerekirse ping 10sn'ye çekilebilir (küçük iyileştirme, ertelendi).
 
 ### Faz 4 — İleri seviye (gerekirse, büyüyünce)
 

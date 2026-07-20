@@ -398,17 +398,33 @@
       case 'peer-joined': G.online.peer = m.profile || { name: 'Oyuncu' }; G.online.peer.name = cleanText(G.online.peer.name || 'Oyuncu', 22); if (G.screen === 'online') render(); return;
       case 'peer-left': handlePeerLeft(m); return;
       case 'net-down': handlePeerLeft({ down: true }); return;
+      case 'peer-away': netBanner('Rakip bağlantısı koptu — geri dönmesi bekleniyor…', 'warn'); return;
+      case 'peer-back': netBanner('Rakip geri döndü', 'ok'); return;
+      case 'reconnecting': netBanner('Bağlantın koptu — yeniden bağlanılıyor…', 'warn'); return;
+      case 'resumed': netBanner('Yeniden bağlandın', 'ok'); if (G.screen === 'online') render(); return;
+      case 'reconnect-failed': clearNetBanner(); handlePeerLeft({ down: true }); return;
       case 'error': G.online.status = 'error'; G.online.msg = m.msg || 'Hata'; if (G.screen === 'online') render(); else toast(m.msg || 'Bağlantı hatası'); return;
     }
     if (m._relay) onGameNet(m);
   }
+  /* geçici bağlantı sorunlarında yıkıcı olmayan üst şerit (maçı sonlandırmaz) */
+  function netBanner(msg, kind) {
+    let el = document.getElementById('net-banner');
+    if (!el) { el = document.createElement('div'); el.id = 'net-banner'; document.body.appendChild(el); }
+    el.className = 'net-banner ' + (kind || 'warn');
+    el.innerHTML = (kind === 'ok' ? '✓ ' : '<span class="nb-dot"></span>') + msg;
+    if (netBanner._t) clearTimeout(netBanner._t);
+    if (kind === 'ok') netBanner._t = setTimeout(clearNetBanner, 2500);   // iyi haber kendini gizler
+  }
+  function clearNetBanner() { const el = document.getElementById('net-banner'); if (el) el.remove(); if (netBanner._t) { clearTimeout(netBanner._t); netBanner._t = null; } }
   function handlePeerLeft(m) {
     if (!isOnline()) return;
+    clearNetBanner();
     if (G.screen === 'online') { G.online.peer = null; if (G.online.status === 'hosting') render(); return; }
-    // oyun sırasında rakip düştü
+    // oyun sırasında rakip düştü (grace doldu / kalıcı ayrılış)
     if (G.match && G.match.live) { try { G.match.live.stop(); } catch (_) {} }
     stopHostStream();
-    toast(m.down ? 'Bağlantı koptu' : 'Rakip oyundan ayrıldı');
+    toast(m.down ? 'Bağlantı kurulamadı' : 'Rakip oyundan ayrıldı');
     if (NET) NET.leave();
     G.mode = 'ai'; G.me = null; G.opp = null; G.series = null; G.screen = 'home'; render();
   }

@@ -210,6 +210,7 @@ const ROOM_IDLE_MS = 10 * 60 * 1000; // rakipsiz oda ömrü
 const OPS_PER_MIN = 10;           // IP başına dakikada create/join
 const MSG_RATE = 40;              // soket başına mesaj/sn (yayın ~22Hz)
 const MSG_BURST = 80;
+const RESUME_GRACE_MS = 45000;    // geçici kopmada slotu tutma süresi
 
 function newCode() {
   let c;
@@ -217,6 +218,7 @@ function newCode() {
   while (rooms[c]);
   return c;
 }
+function newToken() { return Math.random().toString(36).slice(2, 12) + Date.now().toString(36); }
 function send(ws, obj) { if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj)); }
 function peerOf(ws) {
   const room = rooms[ws._room]; if (!room) return null;
@@ -262,9 +264,10 @@ wss.on('connection', (ws, req) => {
         if (ws._room) return;
         if (Object.keys(rooms).length >= MAX_ROOMS || overOpsLimit(ws._ip)) { send(ws, { t: 'error', code: 'BUSY', msg: 'Sunucu yoğun, birazdan tekrar dene' }); return; }
         const code = newCode();
-        rooms[code] = { host: ws, guest: null, config: m.config || {}, created: Date.now() };
+        rooms[code] = { host: ws, guest: null, config: m.config || {}, created: Date.now(),
+          tokens: { a: newToken(), b: null }, away: {} };
         ws._room = code; ws._side = 'a';
-        send(ws, { t: 'created', code, side: 'a' });
+        send(ws, { t: 'created', code, side: 'a', token: rooms[code].tokens.a });
         break;
       }
       case 'join': {
@@ -278,10 +281,29 @@ wss.on('connection', (ws, req) => {
         }
         if (room.guest) { send(ws, { t: 'error', code: 'FULL', msg: 'Oda dolu' }); return; }
         room.guest = ws; ws._room = code; ws._side = 'b';
-        // katılana: oda yapılandırması + host profili
-        send(ws, { t: 'joined', code, side: 'b', config: room.config, peer: room.config.profile || null, guestProfile: m.profile || null });
+        room.tokens.b = newToken();
+        // katılana: oda yapılandırması + host profili + resume token
+        send(ws, { t: 'joined', code, side: 'b', config: room.config, peer: room.config.profile || null, guestProfile: m.profile || null, token: room.tokens.b });
         // host'a: rakip geldi
         send(room.host, { t: 'peer-joined', profile: m.profile || null });
+        break;
+      }
+      case 'resume': {
+        // geçici kopmadan sonra aynı slota geri dön (grace penceresi içinde)
+        if (ws._room) return;
+        const code = String(m.code || '').toUpperCase().trim();
+        const room = rooms[code];
+        if (!room) { send(ws, { t: 'resume-failed', reason: 'NO_ROOM' }); return; }
+        const side = (m.side === 'a' || m.side === 'b') ? m.side : null;
+        if (!side || !room.tokens[side] || room.tokens[side] !== m.token) { send(ws, { t: 'resume-failed', reason: 'BAD_TOKEN' }); return; }
+        const occupant = side === 'a' ? room.host : room.guest;
+        if (occupant && occupant.readyState === occupant.OPEN && !room.away[side]) { send(ws, { t: 'resume-failed', reason: 'OCCUPIED' }); return; }
+        if (room.away[side]) { clearTimeout(room.away[side]); room.away[side] = null; }
+        if (side === 'a') room.host = ws; else room.guest = ws;
+        ws._room = code; ws._side = side;
+        send(ws, { t: 'resumed', side, config: room.config });
+        const peer = peerOf(ws);
+        if (peer) send(peer, { t: 'peer-back' });
         break;
       }
       case 'relay': {
@@ -313,16 +335,29 @@ function closeConn(ws) {
 function cleanup(ws, voluntary) {
   const code = ws._room; if (!code) return;
   const room = rooms[code]; if (!room) { ws._room = null; return; }
-  const peer = peerOf(ws);
-  if (peer) send(peer, { t: 'peer-left', voluntary: !!voluntary });
-  // odadan çıkar; host giderse oda kapanır
-  if (ws._side === 'a') {
-    if (room.guest) room.guest._room = null;
+  const side = ws._side;
+  ws._room = null; ws._side = null;
+  if (voluntary) { finalizeLeave(room, code, side); return; }
+  // istemsiz kopma: slotu boşalt ama odayı grace süresince tut; peer'a "away" bildir
+  if (side === 'a') room.host = null; else room.guest = null;
+  const peer = side === 'a' ? room.guest : room.host;
+  if (peer) send(peer, { t: 'peer-away' });
+  if (room.away[side]) clearTimeout(room.away[side]);
+  room.away[side] = setTimeout(() => { room.away[side] = null; finalizeLeave(room, code, side); }, RESUME_GRACE_MS);
+}
+
+/* grace sonrası ya da gönüllü ayrılışta odayı gerçekten kapat.
+   host giderse oda silinir; guest giderse host odada kalır (lobide yeni rakip bekleyebilir). */
+function finalizeLeave(room, code, side) {
+  if (!rooms[code]) return;
+  ['a', 'b'].forEach(s => { if (room.away && room.away[s]) { clearTimeout(room.away[s]); room.away[s] = null; } });
+  if (side === 'a') {
+    if (room.guest) { send(room.guest, { t: 'peer-left', voluntary: true }); room.guest._room = null; }
     delete rooms[code];
   } else {
-    room.guest = null;
+    if (room.host) send(room.host, { t: 'peer-left', voluntary: true });
+    room.guest = null; if (room.tokens) room.tokens.b = null;
   }
-  ws._room = null; ws._side = null;
 }
 
 /* ölü bağlantıları temizle + rakipsiz eski odaları süpür */
