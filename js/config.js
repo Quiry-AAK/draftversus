@@ -10,14 +10,29 @@ window.KD_CONFIG = {
      → "Ölçüm Kimliği" (G-XXXXXXXXXX) buraya. */
   GA_ID: 'G-QJJH9DB3JR',
 
-  /* Adsterra — adsterra.com → Websites → Add new code
-     Banner için "Banner 728x90" ve "Banner 320x50" birimlerini oluştur;
-     verilen koddaki  atOptions.key  değerini buraya yapıştır. */
+  /* ---------- Google AdSense (öncelikli reklam ağı) ----------
+     CPM'i Adsterra'nın birkaç katı. Onay gelince aşağıyı doldur:
+       1) adsense.google.com → Siteler → draftversus.com ekle, onayı bekle
+       2) Reklamlar → Reklam birimine göre → "Görüntülü reklam" oluştur
+          (responsive) → verilen koddaki:
+            data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"  → client
+            data-ad-slot="1234567890"                 → slot
+     client doluyken AdSense yüklenir; boşken otomatik Adsterra'ya düşer. */
+  ADSENSE: {
+    client: '',   // 'ca-pub-XXXXXXXXXXXXXXXX'
+    slot: '',     // '1234567890'
+  },
+
+  /* Adsterra — AdSense onaylanana kadar (ya da reddedilirse) yedek ağ.
+     adsterra.com → Websites → Add new code; koddaki atOptions.key buraya. */
   ADSTERRA: {
     bannerHost: 'smelthrsfranz.com',                 // invoke.js'in geldiği domain (Adsterra kodundaki src)
     banner728: 'b64c736efcc75620a0e7018f54c5d781',   // 728x90 masaüstü banner key'i
     banner320: 'fdf3cb6cfae271166f6a89ae6a120597',   // 320x50 mobil banner key'i
-    /* Social Bar (daha agresif format — kapatmak için boş string yap) */
-    socialBarSrc: 'https://smelthrsfranz.com/f7/c2/b9/f7c2b9f4996a679c4e9ee6d625543d51.js',
+    /* Social Bar KAPALI: pop-under tarzı agresif format AdSense onayını
+       riske atar (ve oyun deneyimini bozar). AdSense'ten vazgeçilirse
+       eski değeri geri koyabilirsin:
+       'https://smelthrsfranz.com/f7/c2/b9/f7c2b9f4996a679c4e9ee6d625543d51.js' */
+    socialBarSrc: '',
   },
 };

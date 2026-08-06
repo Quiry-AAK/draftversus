@@ -37,9 +37,10 @@ const MIME = {
 };
 /* metin tabanlılar gzip'lenir; görsel/font zaten sıkışık */
 const COMPRESSIBLE = { '.html': 1, '.js': 1, '.css': 1, '.json': 1, '.svg': 1, '.txt': 1, '.xml': 1, '.webmanifest': 1 };
-/* önbellek: html her zaman taze; js/css kısa (versiyonlama yok); görsel/font uzun */
-function cacheControl(ext) {
-  if (ext === '.html') return 'no-cache';
+/* önbellek: html ve config her zaman taze; js/css kısa (versiyonlama yok); görsel/font uzun.
+   config.js istisna: reklam/analitik ID'leri değişince anında yansımalı (5 dk beklememeli). */
+function cacheControl(ext, base) {
+  if (ext === '.html' || base === 'config.js') return 'no-cache';
   if (ext === '.js' || ext === '.css' || ext === '.webmanifest') return 'public, max-age=300';
   return 'public, max-age=86400';
 }
@@ -117,6 +118,21 @@ const server = http.createServer((req, res) => {
       res.end('User-agent: *\nAllow: /\n\nSitemap: ' + siteBase(req) + '/sitemap.xml\n');
       return;
     }
+    if (urlPath === '/ads.txt') {
+      // AdSense publisher ID'si js/config.js'te doluysa ads.txt otomatik üretilir
+      // (eksik ads.txt reklam gelirini düşürür). Boşsa dosya yokmuş gibi davranır.
+      try {
+        const cfg = fs.readFileSync(path.join(ROOT, 'js', 'config.js'), 'utf8');
+        const m = cfg.match(/client:\s*'(ca-)?(pub-\d{10,25})'/);
+        if (m) {
+          res.writeHead(200, Object.assign({ 'Content-Type': MIME['.txt'], 'Cache-Control': 'public, max-age=3600' }, SEC));
+          res.end('google.com, ' + m[2] + ', DIRECT, f08c47fec0942fa0\n');
+          return;
+        }
+      } catch (_) {}
+      res.writeHead(404, Object.assign({ 'Content-Type': MIME['.txt'] }, SEC));
+      res.end('Not found'); return;
+    }
     if (urlPath === '/sitemap.xml') {
       const base = siteBase(req);
       const modOf = (p) => {
@@ -151,7 +167,7 @@ const server = http.createServer((req, res) => {
       const ext = path.extname(fp).toLowerCase();
       const headers = Object.assign({
         'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Cache-Control': code === 404 ? 'no-store' : cacheControl(ext),
+        'Cache-Control': code === 404 ? 'no-store' : cacheControl(ext, path.basename(fp)),
       }, SEC);
       if (st && !code) {
         headers['Last-Modified'] = st.mtime.toUTCString();

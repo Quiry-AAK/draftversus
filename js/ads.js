@@ -1,19 +1,54 @@
 /* ============================================================
-   DraftVersus — Adsterra reklam yöneticisi
+   DraftVersus — reklam yöneticisi (AdSense öncelikli, Adsterra yedek)
    İlke: oyun bağırmasın. Banner yalnızca menü/ara ekranlarında
    (home, online, lobby, between, result) görünür; draft/düello/
    taktik/maç sırasında tamamen kaldırılır.
-   - Key'ler KD_CONFIG.ADSTERRA içinde; boşsa hiçbir şey yüklenmez.
-   - Banner, izole bir iframe içine yazılır (atOptions çakışmaz).
+
+   Ağ seçimi KD_CONFIG'e göre otomatik:
+     ADSENSE.client + slot doluysa  → AdSense (yüksek CPM)
+     değilse ADSTERRA key'leri varsa → Adsterra (yedek)
+     ikisi de boşsa                  → hiçbir şey yüklenmez
    ============================================================ */
 (function () {
-  const A = (window.KD_CONFIG && window.KD_CONFIG.ADSTERRA) || {};
+  const CFG = window.KD_CONFIG || {};
+  const S = CFG.ADSENSE || {};
+  const A = CFG.ADSTERRA || {};
+  const USE_ADSENSE = !!(S.client && S.slot);
   const MENU_SCREENS = { home: 1, online: 1, lobby: 1, between: 1, result: 1 };
-  let active = false;
+  let active = false, senseLoaded = false;
 
   function slot() { return document.getElementById('ad-slot'); }
+  function barHeight() { return window.innerWidth < 760 ? 60 : 90; }
 
-  function pick() {
+  /* ---------- AdSense ---------- */
+  function loadSenseScript() {
+    if (senseLoaded) return;
+    senseLoaded = true;
+    const s = document.createElement('script');
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(S.client);
+    document.head.appendChild(s);
+  }
+  function showSense(el) {
+    loadSenseScript();
+    const h = barHeight();
+    const ins = document.createElement('ins');
+    ins.className = 'adsbygoogle';
+    ins.style.cssText = 'display:block;width:100%;height:' + h + 'px';
+    ins.setAttribute('data-ad-client', S.client);
+    ins.setAttribute('data-ad-slot', S.slot);
+    ins.setAttribute('data-ad-format', 'horizontal');
+    ins.setAttribute('data-full-width-responsive', 'true');
+    el.appendChild(ins);
+    el.style.display = 'flex';
+    document.body.classList.add('has-ad');
+    document.body.style.setProperty('--ad-h', h + 'px');
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {}
+  }
+
+  /* ---------- Adsterra (yedek) ---------- */
+  function pickAdsterra() {
     const mobile = window.innerWidth < 760;
     if (mobile && A.banner320) return { key: A.banner320, w: 320, h: 50 };
     if (!mobile && A.banner728) return { key: A.banner728, w: 728, h: 90 };
@@ -21,12 +56,9 @@
     if (A.banner728) return { key: A.banner728, w: 728, h: 90 };
     return null;
   }
-
-  function show() {
-    const el = slot();
-    if (!el || active) return;
-    const b = pick();
-    if (!b) return;
+  function showAdsterra(el) {
+    const b = pickAdsterra();
+    if (!b) return false;
     const ifr = document.createElement('iframe');
     ifr.width = b.w; ifr.height = b.h;
     ifr.setAttribute('frameborder', '0');
@@ -44,9 +76,15 @@
       + '<scr' + 'ipt src="https://' + (A.bannerHost || 'www.highperformanceformat.com') + '/' + b.key + '/invoke.js"></scr' + 'ipt>'
       + '</body></html>');
     doc.close();
-    active = true;
+    return true;
   }
 
+  function show() {
+    const el = slot();
+    if (!el || active) return;
+    if (USE_ADSENSE) { showSense(el); active = true; return; }
+    if (showAdsterra(el)) active = true;
+  }
   function hide() {
     const el = slot();
     if (!el) return;
@@ -58,10 +96,12 @@
 
   window.KD_ADS = {
     onScreen(name) { if (MENU_SCREENS[name]) show(); else hide(); },
+    network: USE_ADSENSE ? 'adsense' : (pickAdsterra() ? 'adsterra' : 'none'),
   };
 
-  /* Social Bar — opsiyonel, yalnızca src verilmişse (tüm sayfa geneli) */
-  if (A.socialBarSrc) {
+  /* Social Bar — yalnızca src verilmişse. AdSense kullanılırken YÜKLENMEZ
+     (pop-under tarzı formatlar AdSense politikalarıyla çakışır). */
+  if (!USE_ADSENSE && A.socialBarSrc) {
     const s = document.createElement('script');
     s.src = A.socialBarSrc;
     s.async = true;
