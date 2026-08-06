@@ -46,7 +46,7 @@ function cacheControl(ext, base) {
 }
 
 /* ---------- SEO: robots.txt + sitemap.xml (domain'i istekten algılar) ---------- */
-const SITE_PAGES = ['/', '/nasil-oynanir.html', '/hakkinda.html', '/iletisim.html', '/gizlilik.html', '/kullanim-kosullari.html'];
+const SITE_PAGES = ['/', '/nasil-oynanir.html', '/strateji.html', '/sss.html', '/hakkinda.html', '/iletisim.html', '/gizlilik.html', '/kullanim-kosullari.html'];
 function siteBase(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
   const proto = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');

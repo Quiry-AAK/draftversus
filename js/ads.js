@@ -5,14 +5,16 @@
    taktik/maç sırasında tamamen kaldırılır.
 
    Ağ seçimi KD_CONFIG'e göre otomatik:
-     ADSENSE.client + slot doluysa  → AdSense (yüksek CPM)
-     değilse ADSTERRA key'leri varsa → Adsterra (yedek)
-     ikisi de boşsa                  → hiçbir şey yüklenmez
+     ADSENSE.client varsa            → doğrulama/Auto-ads script'i yüklenir
+     ADSENSE.client + slot doluysa   → banner AdSense birimi olur (yüksek CPM)
+     slot henüz yoksa                → banner Adsterra'da kalır (gelir kesilmez)
+     hiçbiri yoksa                   → hiçbir şey yüklenmez
    ============================================================ */
 (function () {
   const CFG = window.KD_CONFIG || {};
   const S = CFG.ADSENSE || {};
   const A = CFG.ADSTERRA || {};
+  const HAS_CLIENT = !!S.client;
   const USE_ADSENSE = !!(S.client && S.slot);
   const MENU_SCREENS = { home: 1, online: 1, lobby: 1, between: 1, result: 1 };
   let active = false, senseLoaded = false;
@@ -97,11 +99,16 @@
   window.KD_ADS = {
     onScreen(name) { if (MENU_SCREENS[name]) show(); else hide(); },
     network: USE_ADSENSE ? 'adsense' : (pickAdsterra() ? 'adsterra' : 'none'),
+    verifying: HAS_CLIENT && !USE_ADSENSE,   // onay bekleniyor: script var, birim yok
   };
 
-  /* Social Bar — yalnızca src verilmişse. AdSense kullanılırken YÜKLENMEZ
-     (pop-under tarzı formatlar AdSense politikalarıyla çakışır). */
-  if (!USE_ADSENSE && A.socialBarSrc) {
+  /* AdSense script'i client varsa sayfa açılışında yüklenir — site doğrulaması
+     ve Auto ads bunu gerektirir (slot henüz yokken de). */
+  if (HAS_CLIENT) loadSenseScript();
+
+  /* Social Bar — yalnızca src verilmişse. AdSense sürecinde HİÇ yüklenmez
+     (pop-under tarzı formatlar onay/politika riski yaratır). */
+  if (!HAS_CLIENT && A.socialBarSrc) {
     const s = document.createElement('script');
     s.src = A.socialBarSrc;
     s.async = true;

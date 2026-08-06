@@ -19,8 +19,11 @@ window.KD_CONFIG = {
             data-ad-slot="1234567890"                 → slot
      client doluyken AdSense yüklenir; boşken otomatik Adsterra'ya düşer. */
   ADSENSE: {
-    client: '',   // 'ca-pub-XXXXXXXXXXXXXXXX'
-    slot: '',     // '1234567890'
+    client: 'ca-pub-3889797797438326',   // yayıncı kimliği (site doğrulaması için yeterli)
+    /* slot: onay geldikten sonra AdSense → Reklamlar → "Reklam birimine göre"
+       → Görüntülü reklam (responsive) oluştur, data-ad-slot değerini buraya yaz.
+       Boş kaldığı sürece banner alanında Adsterra gösterilmeye devam eder. */
+    slot: '',
   },
 
   /* Adsterra — AdSense onaylanana kadar (ya da reddedilirse) yedek ağ.
