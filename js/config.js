@@ -29,6 +29,15 @@ window.KD_CONFIG = {
   /* Adsterra — AdSense onaylanana kadar (ya da reddedilirse) yedek ağ.
      adsterra.com → Websites → Add new code; koddaki atOptions.key buraya. */
   ADSTERRA: {
+    /* Ana şalter: false yaparsan Adsterra hiç yüklenmez (AdSense onayı
+       riskli görünürse tek satırla kapatabilirsin). */
+    enabled: true,
+    /* Hangi oyun ekranlarında gösterilsin. Az ekran = az gösterim = az risk.
+       Tümü:     ['home','online','lobby','between','result']
+       Kısıtlı:  ['between','result']   ← sadece maç arası ve seri sonu
+       NOT: İçerik sayfalarında (SSS, strateji, hakkında…) zaten hiç
+       gösterilmez — oraya reklam alanı konmadı, Google incelemesi temiz görür. */
+    screens: ['home', 'online', 'lobby', 'between', 'result'],
     bannerHost: 'smelthrsfranz.com',                 // invoke.js'in geldiği domain (Adsterra kodundaki src)
     banner728: 'b64c736efcc75620a0e7018f54c5d781',   // 728x90 masaüstü banner key'i
     banner320: 'fdf3cb6cfae271166f6a89ae6a120597',   // 320x50 mobil banner key'i

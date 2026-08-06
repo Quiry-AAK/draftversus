@@ -16,7 +16,13 @@
   const A = CFG.ADSTERRA || {};
   const HAS_CLIENT = !!S.client;
   const USE_ADSENSE = !!(S.client && S.slot);
-  const MENU_SCREENS = { home: 1, online: 1, lobby: 1, between: 1, result: 1 };
+  const ADSTERRA_ON = A.enabled !== false;
+  /* Banner'ın görüneceği ekranlar: AdSense tüm menü ekranlarında,
+     Adsterra ise config'te izin verilenlerde (kontrollü gösterim). */
+  const DEFAULT_SCREENS = ['home', 'online', 'lobby', 'between', 'result'];
+  const allow = USE_ADSENSE ? DEFAULT_SCREENS : (Array.isArray(A.screens) ? A.screens : DEFAULT_SCREENS);
+  const MENU_SCREENS = {};
+  allow.forEach(s => { MENU_SCREENS[s] = 1; });
   let active = false, senseLoaded = false;
 
   function slot() { return document.getElementById('ad-slot'); }
@@ -51,6 +57,7 @@
 
   /* ---------- Adsterra (yedek) ---------- */
   function pickAdsterra() {
+    if (!ADSTERRA_ON) return null;   // ana şalter kapalı
     const mobile = window.innerWidth < 760;
     if (mobile && A.banner320) return { key: A.banner320, w: 320, h: 50 };
     if (!mobile && A.banner728) return { key: A.banner728, w: 728, h: 90 };
@@ -108,7 +115,7 @@
 
   /* Social Bar — yalnızca src verilmişse. AdSense sürecinde HİÇ yüklenmez
      (pop-under tarzı formatlar onay/politika riski yaratır). */
-  if (!HAS_CLIENT && A.socialBarSrc) {
+  if (!HAS_CLIENT && ADSTERRA_ON && A.socialBarSrc) {
     const s = document.createElement('script');
     s.src = A.socialBarSrc;
     s.async = true;
