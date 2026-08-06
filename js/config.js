@@ -10,6 +10,20 @@ window.KD_CONFIG = {
      → "Ölçüm Kimliği" (G-XXXXXXXXXX) buraya. */
   GA_ID: 'G-QJJH9DB3JR',
 
+  /* ---------- Firebase (opsiyonel giriş + ilerleme senkronu) ----------
+     Proje: draftversus (Auth: Google, Firestore: europe-west3)
+     NOT: Web API anahtarı gizli değildir; güvenlik Firestore kurallarıyla
+     sağlanır (kullanıcı yalnızca kendi /users/{uid} belgesine erişebilir).
+     Boş bırakılırsa giriş özelliği tamamen kapanır, oyun yerel profille çalışır. */
+  FIREBASE: {
+    apiKey: 'AIzaSyCbE16HTyR1YLRb_DlM88wSXCLTxEN5qWw',
+    authDomain: 'draftversus.firebaseapp.com',
+    projectId: 'draftversus',
+    storageBucket: 'draftversus.firebasestorage.app',
+    messagingSenderId: '301901642422',
+    appId: '1:301901642422:web:b2dd213ba9d02ceb940417',
+  },
+
   /* ---------- Google AdSense (öncelikli reklam ağı) ----------
      CPM'i Adsterra'nın birkaç katı. Onay gelince aşağıyı doldur:
        1) adsense.google.com → Siteler → draftversus.com ekle, onayı bekle

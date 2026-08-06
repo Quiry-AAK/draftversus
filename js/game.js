@@ -224,6 +224,7 @@
           </div>
         </div>
       </div>
+      ${profileStripHTML()}
       <section class="home-intro">
         <h2>DraftVersus nedir?</h2>
         <p class="lead">Tarayıcıda oynanan ücretsiz futbol draft ve taktik düellosu. Kadronu kur, rakibinden oyuncu çal, taktiğini seç ve maçı canlı izle — indirme yok, üyelik yok.</p>
@@ -237,7 +238,27 @@
       </section>
     </div>`;
   }
+  /* Ana ekrandaki kariyer şeridi — yalnızca en az bir seri oynandıysa görünür.
+     Hesap gerekmez; veriler tarayıcıda birikir. Giriş yapılmışsa buluta da yansır. */
+  function profileStripHTML() {
+    if (!window.KD_PROFILE || !KD_PROFILE.hasData()) return '';
+    const p = KD_PROFILE.get(), wr = KD_PROFILE.winRate();
+    const cell = (v, l, col) => `<div class="ps-cell"><div class="ps-val"${col ? ` style="color:${col}"` : ''}>${v}</div><div class="ps-lbl">${l}</div></div>`;
+    const cloud = window.KD_CLOUD ? KD_CLOUD.statusHTML() : '';
+    return `<section class="profile-strip">
+      <div class="ps-head"><span class="ps-title">${T('Kariyerin')}</span>${cloud}</div>
+      <div class="ps-grid">
+        ${cell(p.seriesPlayed, T('Seri'))}
+        ${cell(p.seriesWon, T('Seri galibiyeti'), '#13a76a')}
+        ${cell('%' + wr, T('Kazanma oranı'))}
+        ${cell(p.matchesPlayed, T('Maç'))}
+        ${cell(p.goalsFor, T('Attığın gol'), '#cf6f24')}
+        ${cell(p.bestStreak, T('En iyi seri galibiyet zinciri'))}
+      </div>
+    </section>`;
+  }
   function bindHome() {
+    if (window.KD_CLOUD) KD_CLOUD.bind();   // profil şeridindeki giriş/çıkış butonları
     const goAI = () => { G.mode = 'ai'; G.screen = 'lobby'; render(); };
     const goOnline = () => { G.mode = 'online'; enterOnline(); };
     const stop = e => { if (e && e.stopPropagation) e.stopPropagation(); };
@@ -2078,6 +2099,12 @@
   function goResult() {
     if (G.match.live) G.match.live.stop();
     if (window.KD_ANALYTICS && G.series) KD_ANALYTICS.event('series_end', { mode: G.mode, won: G.series.winsA > G.series.winsB ? 1 : 0, format: G.series.format });
+    // kalıcı profil: seri sonucunu bir kez işle (render tekrarlarında çift saymasın)
+    if (window.KD_PROFILE && G.series && !G.series._recorded) {
+      G.series._recorded = true;
+      KD_PROFILE.recordSeries({ mode: G.mode, won: G.series.winsA > G.series.winsB, matches: G.series.matches, format: G.series.format });
+      if (window.KD_CLOUD) KD_CLOUD.push();   // giriş yapılmışsa buluta yaz
+    }
     G.screen = 'result'; render();
   }
   function resultHTML() {
@@ -2166,5 +2193,8 @@
     if (NET) NET.on(onNetMessage);
     render();
   }
+  /* cloud.js (opsiyonel giriş katmanı) buradan ekranı tazeler ve uyarı gösterir */
+  window.KD_GAME_RENDER = () => { try { render(); } catch (_) {} };
+  window.KD_TOAST = (m) => { try { toast(m); } catch (_) {} };
   init();
 })();

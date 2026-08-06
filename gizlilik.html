@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gizlilik Politikası — DraftVersus</title>
-  <meta name="description" content="DraftVersus gizlilik politikası: hangi veriler işlenir, çerezler, Google Analytics, Google AdSense ve reklam çerezleri hakkında bilgilendirme." />
+  <meta name="description" content="DraftVersus gizlilik politikası: hangi veriler işlenir, çerezler, Google Analytics, AdSense reklam çerezleri ve isteğe bağlı Firebase girişi hakkında bilgilendirme." />
   <meta name="theme-color" content="#19c37d" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -25,14 +25,24 @@
   <main class="page-wrap">
     <h1>Gizlilik Politikası</h1>
     <div class="page-card">
-      <p>Son güncelleme: 17 Temmuz 2026</p>
+      <p>Son güncelleme: 20 Temmuz 2026</p>
       <p>DraftVersus ("site", "oyun") gizliliğine önem verir. Bu sayfa, siteyi kullanırken hangi verilerin işlendiğini ve bunların ne amaçla kullanıldığını açıklar.</p>
 
-      <h2>Hesap ve kişisel veri</h2>
-      <p>DraftVersus'ta <strong>üyelik/hesap sistemi yoktur</strong>; ad-soyad, e-posta veya benzeri kişisel bilgiler istenmez ve sunucuda saklanmaz. Oyunda girdiğin takım adı gibi bilgiler yalnızca oyun deneyimi için kullanılır.</p>
+      <h2>Hesap: zorunlu değil</h2>
+      <p>DraftVersus'u oynamak için <strong>hesap açmana gerek yoktur</strong>. Giriş yapmadan oynadığında ad-soyad, e-posta gibi kişisel bilgiler istenmez ve sunucuda hiçbir kişisel veri saklanmaz. Oyunda girdiğin takım adı yalnızca oyun deneyimi için kullanılır.</p>
 
       <h2>Tarayıcında saklanan veriler (localStorage)</h2>
-      <p>Dil tercihi, ses ayarı ve çerez bildirimi onayı gibi tercihler yalnızca kendi tarayıcında (localStorage) tutulur; bize gönderilmez. Bu verileri tarayıcı ayarlarından dilediğin zaman silebilirsin.</p>
+      <p>Dil tercihi, ses ayarı, çerez bildirimi onayı ve <strong>kariyer istatistiklerin</strong> (oynanan seri/maç sayısı, galibiyet, gol gibi) yalnızca kendi tarayıcında (localStorage) tutulur; giriş yapmadıkça bize gönderilmez. Bu verileri tarayıcı ayarlarından dilediğin zaman silebilirsin.</p>
+
+      <h2>İsteğe bağlı giriş (Google ile) ve bulut senkronu</h2>
+      <p>İlerlemeni farklı cihazlarda sürdürmek istersen, <strong>tamamen isteğe bağlı</strong> olarak Google hesabınla giriş yapabilirsin. Bu özellik <strong>Google Firebase</strong> (Authentication ve Cloud Firestore) altyapısını kullanır.</p>
+      <ul>
+        <li><strong>Ne işlenir:</strong> Giriş yaptığında Firebase tarafından oluşturulan kullanıcı kimliği (UID), Google hesabındaki görünen ad ve e-posta adresi; ayrıca yukarıda sayılan kariyer istatistiklerin.</li>
+        <li><strong>Neden:</strong> Yalnızca ilerlemeni kaydetmek ve cihazlar arasında senkronlamak için. Reklam amacıyla kullanılmaz, üçüncü taraflara satılmaz.</li>
+        <li><strong>Nerede saklanır:</strong> Google Cloud altyapısında, Frankfurt (Almanya) bölgesinde. Verilerine yalnızca kendi hesabın erişebilir; güvenlik kuralları başka kullanıcıların verini okumasını engeller.</li>
+        <li><strong>Silme:</strong> Hesabının ve verilerinin silinmesini istersen <a href="iletisim.html">iletişim sayfasından</a> bize yazman yeterlidir. Ayrıca istediğin zaman "Çıkış" yaparak senkronu durdurabilir, tarayıcı verilerini temizleyerek yerel kaydını silebilirsin.</li>
+        <li><strong>Ayrıntı:</strong> <a href="https://firebase.google.com/support/privacy" rel="noopener" target="_blank">Firebase Gizlilik ve Güvenlik</a> sayfasına bakabilirsin.</li>
+      </ul>
 
       <h2>Online mod</h2>
       <p>Online 1v1 modunda sunucu, iki oyuncu arasında oyun mesajlarını iletmek için geçici oda bilgisi tutar. Maç bittiğinde veya bağlantı koptuğunda bu bilgiler silinir; maç geçmişi ve profil kaydı tutulmaz.</p>
@@ -59,7 +69,7 @@
       <p>Çerezleri tarayıcı ayarlarından engelleyebilir veya silebilirsin. Çerezleri engellemek oyunun temel işlevlerini bozmaz; yalnızca tercihlerinin hatırlanmasını ve analitik/reklam ölçümünü etkiler.</p>
 
       <h2>Çocukların gizliliği</h2>
-      <p>Site kişisel veri toplamadığı için çocuklardan bilerek veri toplanması söz konusu değildir. Yine de reklam içerikleri üçüncü taraflarca sağlandığından, küçük yaştaki kullanıcıların siteyi ebeveyn gözetiminde kullanması önerilir.</p>
+      <p>Oyun giriş yapılmadan oynanabildiği için normal kullanımda çocuklardan kişisel veri toplanmaz. İsteğe bağlı Google girişi 13 yaş ve üzeri kullanıcılar içindir; daha küçük yaştaki kullanıcıların giriş yapmadan oynaması ve siteyi ebeveyn gözetiminde kullanması önerilir. Reklam içerikleri üçüncü taraflarca sağlanır.</p>
 
       <h2>Değişiklikler ve iletişim</h2>
       <p>Bu politika gerektiğinde güncellenebilir; güncel sürüm her zaman bu sayfada yayınlanır. Sorular için <a href="iletisim.html">iletişim sayfası</a> üzerinden bize ulaşabilirsin.</p>
