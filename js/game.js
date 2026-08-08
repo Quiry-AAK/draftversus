@@ -241,10 +241,18 @@
   /* Ana ekrandaki kariyer şeridi — yalnızca en az bir seri oynandıysa görünür.
      Hesap gerekmez; veriler tarayıcıda birikir. Giriş yapılmışsa buluta da yansır. */
   function profileStripHTML() {
-    if (!window.KD_PROFILE || !KD_PROFILE.hasData()) return '';
+    const hasData = !!(window.KD_PROFILE && KD_PROFILE.hasData());
+    const cloud = (window.KD_CLOUD && KD_CLOUD.enabled) ? KD_CLOUD.statusHTML() : '';
+    if (!hasData && !cloud) return '';
+    // Henüz oynanmadıysa bile giriş seçeneği görünür olmalı (yoksa kimse bulamaz)
+    if (!hasData) {
+      return `<section class="profile-strip">
+        <div class="ps-head"><span class="ps-title">${T('İlerleme')}</span>${cloud}</div>
+        <div class="ps-hint">${T('Oynadıkça kariyer istatistiklerin burada birikir — hesap gerekmez. Google ile giriş yaparsan ilerlemen cihazların arasında taşınır.')}</div>
+      </section>`;
+    }
     const p = KD_PROFILE.get(), wr = KD_PROFILE.winRate();
     const cell = (v, l, col) => `<div class="ps-cell"><div class="ps-val"${col ? ` style="color:${col}"` : ''}>${v}</div><div class="ps-lbl">${l}</div></div>`;
-    const cloud = window.KD_CLOUD ? KD_CLOUD.statusHTML() : '';
     return `<section class="profile-strip">
       <div class="ps-head"><span class="ps-title">${T('Kariyerin')}</span>${cloud}</div>
       <div class="ps-grid">

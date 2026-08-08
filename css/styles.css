@@ -482,3 +482,4 @@ body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
   .profile-strip .ps-grid { grid-template-columns: repeat(3, 1fr); }
   .profile-strip .ps-val { font-size: 19px; }
 }
+.profile-strip .ps-hint { font: 500 12.5px 'Hanken Grotesk'; color: var(--muted); line-height: 1.5; }
