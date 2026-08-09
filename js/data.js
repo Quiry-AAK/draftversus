@@ -160,7 +160,7 @@ function statProfile(primary, ovr) {
   const line = POS[primary].line;
   const base = {};
   const r = (n) => Math.max(20, Math.min(99, Math.round(n)));
-  const jitter = () => (Math.random() * 10 - 5);
+  const jitter = () => (RNG() * 10 - 5);
   if (primary === 'KL') {
     return { REF: r(ovr + 2 + jitter()), KON: r(ovr - 1 + jitter()), ELK: r(ovr + jitter()),
              AYK: r(ovr - 9 + jitter()), HIZ: r(ovr - 20 + jitter()), FİZ: r(ovr - 1 + jitter()) };
@@ -209,12 +209,31 @@ const ARCHETYPES = {
   SF:  [{ n: 'Hedef Adam (Pivot)', m: { FİZ: 13, ŞUT: 6, HIZ: -12, DRP: -7, PAS: -3 } }, { n: 'Hızlı Forvet', m: { HIZ: 13, DRP: 7, FİZ: -6, ŞUT: 2 } }, { n: 'Bitirici', m: { ŞUT: 13, HIZ: 2, DRP: -2, PAS: -4 } }, { n: 'Yalancı 9', m: { PAS: 9, DRP: 9, FİZ: -7, ŞUT: -2 } }],
 };
 
-function rand(a, b) { return a + Math.random() * (b - a); }
+/* ---------- Merkezi rastgelelik (seed'lenebilir) ----------
+   Varsayılan Math.random; KD_DATA.setSeed('2026-07-20') çağrılırsa
+   deterministik akış (Günün Meydan Okuması aynı havuzu üretsin diye).
+   setSeed(null) ile normale döner. */
+let RNG = Math.random;
+function setSeed(seed) {
+  if (seed == null) { RNG = Math.random; return; }
+  let h = 2166136261 >>> 0;                       // FNV-1a ile metinden 32-bit tohum
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  let a = h >>> 0;
+  RNG = function () {                              // mulberry32
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function rand(a, b) { return a + RNG() * (b - a); }
 function randi(a, b) { return Math.floor(rand(a, b + 1)); }
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pick(arr) { return arr[Math.floor(RNG() * arr.length)]; }
 function shuffle(arr) {
   const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(RNG() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
 
@@ -228,7 +247,7 @@ function makePlayer(primary, opts = {}) {
   // esneklik: çoğu oyuncu tek mevki (62%), az kısmı esnek (30%), çok azı çok yönlü (8%)
   let flex;
   if (opts.flex) flex = opts.flex;
-  else { const r = Math.random(); flex = r < 0.62 ? 1 : r < 0.92 ? 2 : 3; }
+  else { const r = RNG(); flex = r < 0.62 ? 1 : r < 0.92 ? 2 : 3; }
   flex = Math.min(flex, 1 + cluster.extras.length);
   const positions = [primary];
   const epool = shuffle(cluster.extras);
@@ -284,5 +303,5 @@ window.KD_DATA = {
   POS, ALL_POS, POS_GEO, posDistance, posAffinity, fitLevel, FIT_MULT, FIT_META, ARCHETYPES,
   FORMATIONS, FORMATION_NAMES, PHILOSOPHIES, MENTALITIES, FOCUS_KEYS,
   ROLES, TASKS, TASK_COL, defaultTask, CLUB_COLORS, STAT_KEYS, GK_STAT_KEYS, statKeysFor,
-  shortName, shortOf, makePlayer, buildDraftPool, rand, randi, pick, shuffle,
+  shortName, shortOf, makePlayer, buildDraftPool, rand, randi, pick, shuffle, setSeed,
 };

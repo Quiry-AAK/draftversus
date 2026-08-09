@@ -483,3 +483,26 @@ body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
   .profile-strip .ps-val { font-size: 19px; }
 }
 .profile-strip .ps-hint { font: 500 12.5px 'Hanken Grotesk'; color: var(--muted); line-height: 1.5; }
+
+/* ---- Günün Meydan Okuması kartı ---- */
+.daily-card { max-width: 1040px; margin: 22px auto 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; background: linear-gradient(135deg,#14181f,#1d2530); border-radius: 16px; padding: 18px 22px;
+  box-shadow: 0 14px 34px -22px rgba(20,24,31,.7); }
+.daily-card .dc-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.daily-card .dc-badge { font: 800 10px 'Hanken Grotesk'; letter-spacing: .1em; color: #0f1217;
+  background: linear-gradient(150deg,#19c37d,#12a064); padding: 4px 10px; border-radius: 999px; }
+.daily-card .dc-date { font: 800 13px var(--arch); color: #fff; }
+.daily-card .dc-sub { font: 500 12.5px 'Hanken Grotesk'; color: #aeb4be; line-height: 1.5; max-width: 620px; }
+.daily-card .dc-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.daily-card .dc-done { text-align: center; }
+.daily-card .dc-score { font: 900 26px var(--arch); color: #fff; line-height: 1.1; }
+.daily-card .dc-res { font: 700 11px 'Hanken Grotesk'; margin-top: 2px; }
+.daily-card .dc-res.win { color: #19c37d; }
+.daily-card .dc-res.lose { color: #e5484d; }
+.daily-card .btn-ghost { background: transparent; color: #cfd6e2; border-color: #39424f; }
+.daily-card .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+@media (max-width: 760px) {
+  .daily-card { flex-direction: column; align-items: stretch; text-align: left; gap: 14px; margin-top: 16px; }
+  .daily-card .dc-right { justify-content: space-between; }
+  .daily-card .dc-right .btn { flex: 1; }
+}

@@ -224,6 +224,7 @@
           </div>
         </div>
       </div>
+      ${dailyCardHTML()}
       ${profileStripHTML()}
       <section class="home-intro">
         <h2>DraftVersus nedir?</h2>
@@ -238,6 +239,44 @@
       </section>
     </div>`;
   }
+  /* Günün Meydan Okuması kartı — herkes aynı havuzla oynar, gece yarısı yenilenir */
+  function dailyCardHTML() {
+    if (!window.KD_DAILY) return '';
+    const done = KD_DAILY.read();
+    const right = done
+      ? `<div class="dc-done"><div class="dc-score">${done.winsA}–${done.winsB}</div>
+           <div class="dc-res ${done.won ? 'win' : 'lose'}">${done.won ? T('Kazandın 🏆') : T('Kaybettin')}</div></div>`
+      : `<button class="btn btn-dark" id="daily-start" style="white-space:nowrap">${T('Bugünkü Havuzla Oyna →')}</button>`;
+    return `<section class="daily-card">
+      <div class="dc-left">
+        <div class="dc-title"><span class="dc-badge">${T('GÜNÜN MEYDAN OKUMASI')}</span><span class="dc-date">${KD_DAILY.label()}</span></div>
+        <div class="dc-sub">${done
+          ? T('Bugünü tamamladın. Yeni havuza kalan süre: ') + KD_DAILY.untilReset()
+          : T('Bugün herkes aynı draft havuzuyla oynuyor. Aynı adaylardan en iyi kadroyu sen kurabilir misin?')}</div>
+      </div>
+      <div class="dc-right">${right}${done ? `<button class="btn btn-ghost" id="daily-share" style="padding:9px 16px;font-size:13px">📣 ${T('Paylaş')}</button>` : ''}</div>
+    </section>`;
+  }
+  function bindDailyCard() {
+    const s = document.getElementById('daily-start');
+    if (s) s.onclick = () => {
+      G.mode = 'ai';
+      if (window.KD_ANALYTICS) KD_ANALYTICS.event('daily_start', { id: KD_DAILY.id() });
+      startSeries(true);
+    };
+    const sh = document.getElementById('daily-share');
+    if (sh && window.KD_SHARE) sh.onclick = async () => {
+      const d = KD_DAILY.read(); if (!d) return;
+      sh.disabled = true;
+      const r = await KD_SHARE.share({ me: d.me || 'Takımım', opp: d.opp || 'Rakip', winsA: d.winsA, winsB: d.winsB,
+        won: d.won, format: 3, matches: d.matches || [], daily: true, dailyId: d.id });
+      const msg = { 'copied-downloaded': 'Metin kopyalandı, görsel indirildi', 'downloaded': 'Görsel indirildi',
+        'copied': 'Sonuç panoya kopyalandı', 'failed': 'Paylaşım desteklenmiyor' }[r];
+      if (msg) toast(msg);
+      sh.disabled = false;
+    };
+  }
+
   /* Ana ekrandaki kariyer şeridi — yalnızca en az bir seri oynandıysa görünür.
      Hesap gerekmez; veriler tarayıcıda birikir. Giriş yapılmışsa buluta da yansır. */
   function profileStripHTML() {
@@ -266,6 +305,7 @@
     </section>`;
   }
   function bindHome() {
+    bindDailyCard();
     if (window.KD_CLOUD) KD_CLOUD.bind();   // profil şeridindeki giriş/çıkış butonları
     const goAI = () => { G.mode = 'ai'; G.screen = 'lobby'; render(); };
     const goOnline = () => { G.mode = 'online'; enterOnline(); };
@@ -565,15 +605,21 @@
   /* ============================================================
      Seri / Draft kurulumu
      ============================================================ */
-  function startSeries() {
+  function startSeries(daily) {
     const L = G.lobby;
     let cMe = CLUB_COLORS[L.color], cOpp = CLUB_COLORS[L.oppColor];
     if (cMe === cOpp) cOpp = CLUB_COLORS[(L.oppColor + 1) % CLUB_COLORS.length];
     G.me = newClub(L.name.trim() || 'Vadi Spor', cMe, 'a');
     G.opp = newClub(L.oppName.trim() || 'Liman FK', cOpp, 'b');
     G.opp.formation = G.me.formation;   // draft AYNI dizilişten yapılır (ilk oyuncu seçer); sonra taktikte değişebilir
-    G.series = { format: L.format, winsNeeded: L.format === 3 ? 2 : 3, matchNo: 1, winsA: 0, winsB: 0, matches: [] };
+    const fmt = daily ? 3 : L.format;   // günlük meydan okuma herkes için Bo3
+    G.series = { format: fmt, winsNeeded: fmt === 3 ? 2 : 3, matchNo: 1, winsA: 0, winsB: 0, matches: [],
+      daily: !!daily, dailyId: daily ? KD_DAILY.id() : '' };
+    // Günlük: havuz tarihten türetilen tohumla üretilir → herkeste AYNI adaylar.
+    // Havuz kurulduktan sonra tohum kaldırılır; maç simülasyonu normal rastgeleliğini korur.
+    if (daily && window.KD_DAILY) KD_DATA.setSeed(KD_DAILY.seed());
     G.draftPool = buildDraftPool();
+    if (daily && window.KD_DAILY) KD_DATA.setSeed(null);
     // 16 tur · her turda bir taraf bir mevki açar: açan 6 adaydan ilk seçer,
     // diğeri kalan 5'ten seçmek zorunda (ortak havuz). Açan sıra dönüşümlü.
     G.draft = { round: 0, opener: 'me', phase: 'open', pos: null, cands: null, activeSlot: 0 };
@@ -2110,8 +2156,15 @@
     // kalıcı profil: seri sonucunu bir kez işle (render tekrarlarında çift saymasın)
     if (window.KD_PROFILE && G.series && !G.series._recorded) {
       G.series._recorded = true;
-      KD_PROFILE.recordSeries({ mode: G.mode, won: G.series.winsA > G.series.winsB, matches: G.series.matches, format: G.series.format });
+      const won = G.series.winsA > G.series.winsB;
+      KD_PROFILE.recordSeries({ mode: G.mode, won, matches: G.series.matches, format: G.series.format });
       if (window.KD_CLOUD) KD_CLOUD.push();   // giriş yapılmışsa buluta yaz
+      // Günün Meydan Okuması sonucunu sakla (kart bunu gösterir, paylaşımda kullanılır)
+      if (G.series.daily && window.KD_DAILY) {
+        KD_DAILY.save({ winsA: G.series.winsA, winsB: G.series.winsB, won,
+          me: G.me.name, opp: G.opp.name, matches: G.series.matches });
+        if (window.KD_ANALYTICS) KD_ANALYTICS.event('daily_end', { won: won ? 1 : 0 });
+      }
     }
     G.screen = 'result'; render();
   }
@@ -2167,6 +2220,7 @@
             <div style="display:grid;gap:9px;margin-bottom:22px">${developed}</div>
             <div style="display:grid;gap:10px">
               <button class="btn btn-green" id="rematch" style="width:100%">Rövanş — Yeni Seri 🔁</button>
+              <button class="btn btn-ghost" id="share-result" style="width:100%">📣 Sonucu Paylaş</button>
               <button class="btn btn-ghost" id="to-lobby" style="width:100%">Lobiye Dön</button>
             </div>
           </div>
@@ -2174,7 +2228,30 @@
       </div>
     </div>`;
   }
+  /* sonuç paylaşımı — hem AI hem online modda çalışır */
+  function bindShareResult() {
+    const b = document.getElementById('share-result');
+    if (!b || !window.KD_SHARE) return;
+    b.onclick = async () => {
+      const s = G.series; if (!s) return;
+      b.disabled = true; const old = b.textContent; b.textContent = 'Hazırlanıyor…';
+      try {
+        const r = await KD_SHARE.share({
+          me: G.me.name, opp: G.opp.name, meColor: G.me.color, oppColor: G.opp.color,
+          winsA: s.winsA, winsB: s.winsB, won: s.winsA > s.winsB,
+          format: s.format, matches: s.matches,
+          daily: !!s.daily, dailyId: s.dailyId || '',
+        });
+        const msg = { 'copied-downloaded': 'Metin kopyalandı, görsel indirildi', 'downloaded': 'Görsel indirildi',
+          'copied': 'Sonuç panoya kopyalandı', 'failed': 'Paylaşım desteklenmiyor' }[r];
+        if (msg) toast(msg);
+        if (window.KD_ANALYTICS && r !== 'cancelled') KD_ANALYTICS.event('share_result', { how: r, mode: G.mode });
+      } catch (_) { toast('Paylaşılamadı'); }
+      b.disabled = false; b.textContent = old;
+    };
+  }
   function bindResult() {
+    bindShareResult();
     if (isOnline()) {
       // online: rövanş/çıkış için odadan ayrılıp ana ekrana dön
       const leave = () => { if (G.match && G.match.live) { try { G.match.live.stop(); } catch (_) {} } stopHostStream(); if (NET) NET.leave(); G.mode = 'ai'; G.me = null; G.opp = null; G.series = null; G.screen = 'home'; render(); };
