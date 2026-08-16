@@ -509,3 +509,15 @@ body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
 /* oyuncu kartı köken rozeti */
 .rg-badge { display: inline-block; margin-right: 5px; font-size: 12px; line-height: 1;
   filter: saturate(1.1); vertical-align: baseline; }
+
+/* ---- Meta ilerleme çubuğu + kilitli seçenekler ---- */
+.meta-bar { background: #fbfcfd; border: 1px solid var(--line2); border-radius: 11px; padding: 10px 13px; margin-bottom: 12px; }
+.meta-bar .mb-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 7px; }
+.meta-bar .mb-lv { font: 800 13px var(--arch); color: var(--ink); }
+.meta-bar .mb-next { font: 600 11.5px 'Hanken Grotesk'; color: var(--muted); }
+.meta-bar .mb-track { height: 7px; background: #e6e8ec; border-radius: 4px; overflow: hidden; }
+.meta-bar .mb-fill { height: 100%; background: linear-gradient(90deg,#19c37d,#12a064); border-radius: 4px; transition: width .5s ease; }
+.meta-bar .mb-sub { font: 600 10px var(--mono); color: var(--muted2); margin-top: 5px; text-align: right; }
+.fmt-mini.locked, .opt-pill.locked { opacity: .45; cursor: not-allowed; background: #f6f7f9; border-style: dashed; }
+.fmt-mini.locked:hover, .opt-pill.locked:hover { border-color: var(--line); color: var(--muted); }
+.lk { font-size: 9px; opacity: .85; }

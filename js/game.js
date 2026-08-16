@@ -198,6 +198,24 @@
     return `<div class="screen-head"><div class="screen-num">${num}</div>
       <div><div class="screen-title">${title}</div><div class="screen-sub">${sub}</div></div></div>`;
   }
+  /* Seviye çubuğu — "bir tur daha" motorunun görünen yüzü: nerede olduğunu
+     ve sıradaki açılımın ne olduğunu gösterir. */
+  function metaBarHTML() {
+    if (!window.KD_META) return '';
+    const m = KD_META.get(), nx = KD_META.nextUnlock();
+    const hedef = nx ? `<span class="mb-next">${T('Sıradaki')}: ${nx.label} · ${T('Seviye ')}${nx.lv}</span>` : `<span class="mb-next">${T('Tüm açılımlar tamamlandı')} ✓</span>`;
+    return `<div class="meta-bar">
+      <div class="mb-top"><span class="mb-lv">${T('Seviye ')}${m.level}</span>${hedef}</div>
+      <div class="mb-track"><div class="mb-fill" style="width:${m.pct}%"></div></div>
+      ${m.needed != null ? `<div class="mb-sub">${m.intoLevel} / ${m.needed} XP</div>` : ''}
+    </div>`;
+  }
+  /* Kilitli mi? Kilitliyse açılacağı seviyeyi döndürür, değilse null.
+     Meta modülü yoksa (ya da online rakip tarafında) her şey açık kabul edilir. */
+  function metaLocked(kind, id) {
+    if (!window.KD_META) return null;
+    return KD_META.isUnlocked(kind, id) ? null : KD_META.lockLevel(kind, id);
+  }
   /* Oyuncu kartındaki köken rozeti — kimlik hissi için (kurgusal, lisans yok).
      Emoji bayrak desteklenmeyen sistemlerde harf kodu görünür, ikisi de okunur. */
   function regionBadge(p) {
@@ -302,6 +320,7 @@
     const cell = (v, l, col) => `<div class="ps-cell"><div class="ps-val"${col ? ` style="color:${col}"` : ''}>${v}</div><div class="ps-lbl">${l}</div></div>`;
     return `<section class="profile-strip">
       <div class="ps-head"><span class="ps-title">${T('Kariyerin')}</span>${cloud}</div>
+      ${metaBarHTML()}
       <div class="ps-grid">
         ${cell(p.seriesPlayed, T('Seri'))}
         ${cell(p.seriesWon, T('Seri galibiyeti'), '#13a76a')}
@@ -781,7 +800,7 @@
       <div class="draft-grid">
         <div class="draft-col bd">
           <div class="between" style="margin-bottom:8px"><div class="label">İlk 11'i Kur</div><div class="mono" style="color:var(--blue);background:#eef3fd;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700">${me.lineup.filter(Boolean).length}/11</div></div>
-          <div class="g3" style="grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px">${FORMATION_NAMES.map(n => `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}" data-dformation="${n}" style="font-size:11px;padding:7px 3px">${n}</div>`).join('')}</div>
+          <div class="g3" style="grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px">${FORMATION_NAMES.map(n => { const lk = metaLocked('formation', n); return `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-dformation="${n}"`} title="${lk ? T('Seviye ') + lk : ''}" style="font-size:11px;padding:7px 3px">${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('')}</div>
           <div class="muted" style="font-size:11.5px;margin-bottom:12px">${!opening ? 'Rakip mevki açtı — sağdaki kalan adaylardan seç (en uygun slotuna yerleşir).' : me.lineup.some(Boolean) ? 'Açmak istediğin boş slota dokun → 6 aday açılır. Yeşil slot şu an açık.' : 'Önce dizilişini seç, sonra açmak istediğin slota dokun.'}</div>
           <div class="pitch" style="height:430px">${PITCH_LINES}${tokens}</div>
           <div class="flexc" style="margin-top:14px;gap:9px;border:1px solid #f1ddc6;background:#fdf7f0;border-radius:10px;padding:9px 12px">
@@ -1187,8 +1206,8 @@
       const isSel = sel && sel.bench && sel.idx === i; const inj = isInjured(p);
       return `<div class="btok ${isSel ? 'sel' : ''} ${inj ? 'inj' : ''}" data-tbench="${i}" title="${p.name} · ${p.age} yaş · Güç ${p.ovr}${inj ? ' · SAKAT (oynayamaz)' : ''}"><div class="dot">${shortOf(p)}<span class="ovr">${p.ovr}</span></div><div class="pos">${inj ? '➕ sakat' : p.pos}</div></div>`;
     }).join('');
-    const fmts = FORMATION_NAMES.map(n => `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}" data-formation="${n}">${n}</div>`).join('');
-    const phils = PHILOSOPHIES.map(n => `<div class="opt-pill ${me.philosophy === n ? 'sel' : ''}" data-phil="${n}">${n}</div>`).join('');
+    const fmts = FORMATION_NAMES.map(n => { const lk = metaLocked('formation', n); return `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-formation="${n}"`} title="${lk ? T('Seviye ') + lk : ''}">${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
+    const phils = PHILOSOPHIES.map(n => { const lk = metaLocked('philosophy', n); return `<div class="opt-pill ${me.philosophy === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-phil="${n}"`} title="${lk ? T('Seviye ') + lk : ''}">${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
     const mentIdx = MENTALITIES.indexOf(me.mentality);
     const mentLbls = MENTALITIES.map((n, i) => `<span class="${i === mentIdx ? 'sel' : ''}" data-ment="${i}">${n}</span>`).join('');
     const fUsed = focusUsed(me), fLeft = FOCUS_BUDGET - fUsed;
@@ -1645,7 +1664,7 @@
         <div class="stam-bar" title="Enerji ${stam}%"><div style="width:${stam}%;background:${stCol}"></div></div>
         <div class="nm" style="${carded ? 'color:#b8870a;font-weight:800' : ''}">${p.name}${carded ? ' 🟨' : ''}</div>${off ? '<span class="tasklbl" style="background:#e5484d">↓ Çıkıyor</span>' : ''}</div>`;
     }).join('');
-    const fmts = FORMATION_NAMES.map(n => `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}" data-pformation="${n}">${n}</div>`).join('');
+    const fmts = FORMATION_NAMES.map(n => { const lk = metaLocked('formation', n); return `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-pformation="${n}"`}>${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
     const mentIdx = MENTALITIES.indexOf(me.mentality);
     const pLeft = FOCUS_BUDGET - focusUsed(me);
     const focusRows = FOCUS_KEYS.map(k => { const v = me.focus[k] || 0;
@@ -2173,6 +2192,18 @@
       G.series._recorded = true;
       const won = G.series.winsA > G.series.winsB;
       KD_PROFILE.recordSeries({ mode: G.mode, won, matches: G.series.matches, format: G.series.format });
+      // meta ilerleme: XP ver, seviye atlandıysa/açılım geldiyse kullanıcıya bildir
+      if (window.KD_META) {
+        const r = KD_META.addForSeries({ won, matches: G.series.matches, mode: G.mode, daily: !!G.series.daily });
+        G.series._metaGain = r;
+        if (r.levelUp) {
+          setTimeout(() => {
+            toast(T('Seviye ') + r.to + ' 🎉');
+            (r.unlocked || []).forEach((u, i) => setTimeout(() => toast(T('Açıldı: ') + u.label), 1200 + i * 1300));
+          }, 900);
+          if (window.KD_ANALYTICS) KD_ANALYTICS.event('level_up', { level: r.to });
+        }
+      }
       if (window.KD_CLOUD) KD_CLOUD.push();   // giriş yapılmışsa buluta yaz
       // Günün Meydan Okuması sonucunu sakla (kart bunu gösterir, paylaşımda kullanılır)
       if (G.series.daily && window.KD_DAILY) {
