@@ -24,6 +24,11 @@
   const MENU_SCREENS = {};
   allow.forEach(s => { MENU_SCREENS[s] = 1; });
   let active = false, senseLoaded = false;
+  /* Yenileme durumu: banner bir kez basılıp öylece kalırsa menü ekranları
+     arasında dolaşan kullanıcı tek gösterim üretir. Ekran DEĞİŞTİĞİNDE
+     (kullanıcı eylemi) ve asgari süre geçtiyse birim tazelenir. */
+  let lastScreen = null, lastShownAt = 0;
+  const REFRESH_MIN_MS = 30000;
 
   function slot() { return document.getElementById('ad-slot'); }
   function barHeight() { return window.innerWidth < 760 ? 60 : 90; }
@@ -91,8 +96,9 @@
   function show() {
     const el = slot();
     if (!el || active) return;
-    if (USE_ADSENSE) { showSense(el); active = true; return; }
-    if (showAdsterra(el)) active = true;
+    if (USE_ADSENSE) { showSense(el); active = true; }
+    else if (showAdsterra(el)) active = true;
+    if (active) lastShownAt = Date.now();
   }
   function hide() {
     const el = slot();
@@ -104,7 +110,38 @@
   }
 
   window.KD_ADS = {
-    onScreen(name) { if (MENU_SCREENS[name]) show(); else hide(); },
+    /* Ekran değişiminde banner tazelenir: reklam ekranı DEĞİŞTİĞİNDE (kullanıcı
+       eylemi sonucu) ve ≥30 sn geçtiyse yeniden basılır. Sekme arka plandayken
+       yenilenmez — görünmeyen gösterim hem işe yaramaz hem politika riski. */
+    onScreen(name) {
+      if (!MENU_SCREENS[name]) { hide(); lastScreen = name; return; }
+      const changed = name !== lastScreen;
+      lastScreen = name;
+      if (active && changed
+          && Date.now() - lastShownAt >= REFRESH_MIN_MS
+          && (typeof document.visibilityState !== 'string' || document.visibilityState === 'visible')) {
+        hide();   // active=false yapar, sıradaki show() taze birim basar
+      }
+      show();
+    },
+    /* Ödüllü video — sağlayıcı (portal SDK / AdSense H5) bağlanana kadar no-op.
+       Çağrı noktaları bugünden bu API'ye kodlanır; sağlayıcı gelince yalnızca
+       bu fonksiyon değişir, oyun koduna dokunulmaz.
+       Sözleşme: Promise<boolean> — true ise ödül verilir. */
+    rewarded(placement) {
+      if (typeof window.KD_REWARDED_PROVIDER === 'function') {
+        try { return Promise.resolve(window.KD_REWARDED_PROVIDER(placement)).then(v => !!v).catch(() => false); }
+        catch (_) { return Promise.resolve(false); }
+      }
+      return Promise.resolve(false);
+    },
+    /* Ödüllü reklamın şu an mümkün olup olmadığı (buton göstermeye değer mi) */
+    rewardedReady() { return typeof window.KD_REWARDED_PROVIDER === 'function'; },
+    /* Oyun anları (portal SDK'ları gameplayStart/Stop, happytime bekler) */
+    moment(name) {
+      const p = window.KD_PORTAL;
+      if (p && typeof p.moment === 'function') { try { p.moment(name); } catch (_) {} }
+    },
     network: USE_ADSENSE ? 'adsense' : (pickAdsterra() ? 'adsterra' : 'none'),
     verifying: HAS_CLIENT && !USE_ADSENSE,   // onay bekleniyor: script var, birim yok
   };

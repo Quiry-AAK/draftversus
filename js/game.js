@@ -606,6 +606,7 @@
      Seri / Draft kurulumu
      ============================================================ */
   function startSeries(daily) {
+    if (window.KD_ANALYTICS) KD_ANALYTICS.event('funnel_draft_start', { mode: G.mode, daily: !!daily });
     const L = G.lobby;
     let cMe = CLUB_COLORS[L.color], cOpp = CLUB_COLORS[L.oppColor];
     if (cMe === cOpp) cOpp = CLUB_COLORS[(L.oppColor + 1) % CLUB_COLORS.length];
@@ -901,6 +902,7 @@
     G.opp.squad = [...G.opp.lineup.filter(Boolean), ...G.opp.bench.filter(Boolean)];
   }
   function goDuello() {
+    if (window.KD_ANALYTICS) KD_ANALYTICS.event('funnel_duello', { mode: G.mode, daily: !!(G.series && G.series.daily) });
     syncSquads();
     G.duello = { mySteal: null, myProtect: null, revealed: false, locked: false, myLock: null, oppLock: null };
     G.screen = 'duello';
@@ -1106,6 +1108,7 @@
      4 · KADRO & TAKTİK
      ============================================================ */
   function goTactics() {
+    if (window.KD_ANALYTICS) KD_ANALYTICS.event('funnel_tactics', { mode: G.mode });
     benchInjured(G.me);   // sakat oyuncuları ilk 11'den yedeğe al (oynayamazlar)
     // çalma sonrası boş kalan ilk 11 slotlarını yedekten doldurmaya çalışma (kullanıcı düzenleyebilir)
     fillHolesFromBench(G.me);
@@ -1395,6 +1398,8 @@
      5 · MAÇ (canlı)
      ============================================================ */
   function goMatch() {
+    if (window.KD_ANALYTICS) KD_ANALYTICS.event('funnel_match', { mode: G.mode, matchNo: G.series ? G.series.matchNo : 0 });
+    if (window.KD_ADS) KD_ADS.moment('gameplayStart');
     if (!isOnline()) aiSetupLineup(G.opp);   // online'da rakip dizilişi "Hazır"da geldi
     syncSquads();
     G.match = { panelOpen: false, panelMode: 'subs', subsLeft: 2, subOut: null, subIn: null, sel: null, aiSubbed: false, ended: false, halftime: false, stats: { possA: 50, possB: 50, shotsA: 0, shotsB: 0, sotA: 0, sotB: 0 }, evHTML: '' };
@@ -2057,6 +2062,7 @@
      6 · MAÇ ARASI
      ============================================================ */
   function goBetween() {
+    if (window.KD_ANALYTICS) KD_ANALYTICS.event('funnel_between', { mode: G.mode, matchNo: G.series ? G.series.matchNo : 0 });
     if (G.match.live) { try { G.match.live.stop(); } catch (_) {} }
     stopHostStream();
     if (isOnline()) G.between = { ready: false, oppReady: (G._betweenReadyFor === G.series.matchNo) };   // sadece BU maç için gelen onayı say (eski tur taşınmaz)
@@ -2152,6 +2158,7 @@
      ============================================================ */
   function goResult() {
     if (G.match.live) G.match.live.stop();
+    if (window.KD_ADS) KD_ADS.moment('gameplayStop');
     if (window.KD_ANALYTICS && G.series) KD_ANALYTICS.event('series_end', { mode: G.mode, won: G.series.winsA > G.series.winsB ? 1 : 0, format: G.series.format });
     // kalıcı profil: seri sonucunu bir kez işle (render tekrarlarında çift saymasın)
     if (window.KD_PROFILE && G.series && !G.series._recorded) {
