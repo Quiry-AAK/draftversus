@@ -194,9 +194,12 @@
     ({ home: bindHome, online: bindOnline, lobby: bindLobby, draft: bindDraft, duello: bindDuello, tactics: bindTactics,
        match: bindMatch, between: bindBetween, result: bindResult }[G.screen] || (() => {}))();
   }
+  /* Ekran başlığı — çeviriyi merkezi olarak burada uygular, böylece her
+     head() çağrısını tek tek sarmaya gerek kalmaz. Birleştirilmiş metinlerde
+     (örn. 'Maç ' + no) sabit kısım sözlükten geçer, sayı olduğu gibi kalır. */
   function head(num, title, sub) {
     return `<div class="screen-head"><div class="screen-num">${num}</div>
-      <div><div class="screen-title">${title}</div><div class="screen-sub">${sub}</div></div></div>`;
+      <div><div class="screen-title">${T(title)}</div><div class="screen-sub">${T(sub)}</div></div></div>`;
   }
   /* ---------- Ödüllü reklam yardımcıları ----------
      İlke: sağlayıcı yokken buton HİÇ gösterilmez (tıklanıp bir şey olmayan
@@ -630,7 +633,7 @@
             <div class="label" style="margin-bottom:9px">Kulüp Rengi</div>
             <div class="swatches" id="my-swatches">${sw(L.color, L.oppColor)}</div>
 
-            <button class="btn btn-green" id="create-room" style="width:100%;margin-top:24px">Drafte Başla →</button>
+            <button class="btn btn-green" id="create-room" style="width:100%;margin-top:24px">${T('Drafte Başla →')}</button>
           </div>
 
           <div class="lobby-or"><div class="bar"></div><div style="font:700 11px 'Hanken Grotesk';color:var(--faint);letter-spacing:.08em">VS</div><div class="bar"></div></div>
@@ -1036,7 +1039,7 @@
         </div>
         <div class="flexc" style="gap:10px">
           <div class="muted" style="font-size:12px">Kilitleyince geri alınamaz</div>
-          <button class="btn btn-dark" id="lock-duello" ${ready ? '' : 'disabled'}>Seçimi Kilitle 🔒</button>
+          <button class="btn btn-dark" id="lock-duello" ${ready ? '' : 'disabled'}>${T('Seçimi Kilitle 🔒')}</button>
         </div>
       </div>
     </div>`;
@@ -2188,7 +2191,7 @@
             </div>
           </div>
           ${matchStatsCardHTML()}
-          <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><div class="row-actions">${rewardBtn('rw-rest', T('Kadroyu dinlendir'))}<button class="btn btn-green" id="to-duello">Düello'ya Geç →</button></div></div>
+          <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><div class="row-actions">${rewardBtn('rw-rest', T('Kadroyu dinlendir'))}<button class="btn btn-green" id="to-duello">${T("Düello'ya Geç →")}</button></div></div>
         </div>
       </div>
     </div>`;
@@ -2326,9 +2329,9 @@
             <div class="label" style="margin-bottom:14px">Son Maçta Gelişenler</div>
             <div style="display:grid;gap:9px;margin-bottom:22px">${developed}</div>
             <div style="display:grid;gap:10px">
-              <button class="btn btn-green" id="rematch" style="width:100%">Rövanş — Yeni Seri 🔁</button>
-              <button class="btn btn-ghost" id="share-result" style="width:100%">📣 Sonucu Paylaş</button>
-              <button class="btn btn-ghost" id="to-lobby" style="width:100%">Lobiye Dön</button>
+              <button class="btn btn-green" id="rematch" style="width:100%">${T('Rövanş — Yeni Seri 🔁')}</button>
+              <button class="btn btn-ghost" id="share-result" style="width:100%">${T('📣 Sonucu Paylaş')}</button>
+              <button class="btn btn-ghost" id="to-lobby" style="width:100%">${T('Lobiye Dön')}</button>
             </div>
           </div>
         </div>

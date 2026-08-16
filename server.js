@@ -46,7 +46,10 @@ function cacheControl(ext, base) {
 }
 
 /* ---------- SEO: robots.txt + sitemap.xml (domain'i istekten algılar) ---------- */
-const SITE_PAGES = ['/', '/nasil-oynanir.html', '/strateji.html', '/sss.html', '/hakkinda.html', '/iletisim.html', '/gizlilik.html', '/kullanim-kosullari.html'];
+const SITE_PAGES = [
+  '/', '/nasil-oynanir.html', '/strateji.html', '/sss.html', '/hakkinda.html', '/iletisim.html', '/gizlilik.html', '/kullanim-kosullari.html',
+  '/en/', '/en/how-to-play.html', '/en/strategy.html', '/en/faq.html', '/en/about.html', '/en/contact.html', '/en/privacy.html', '/en/terms.html',
+];
 function siteBase(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
   const proto = req.headers['x-forwarded-proto'] || (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
@@ -137,7 +140,7 @@ const server = http.createServer((req, res) => {
       const base = siteBase(req);
       const modOf = (p) => {
         // gerçek dosya değişim tarihi — her istekte "bugün" demek Google'a yanlış sinyal olur
-        const f = p === '/' ? 'index.html' : p.slice(1);
+        const f = p.endsWith('/') ? p.slice(1) + 'index.html' : p.slice(1);
         try { return fs.statSync(path.join(ROOT, f)).mtime.toISOString().slice(0, 10); }
         catch (_) { return new Date().toISOString().slice(0, 10); }
       };
@@ -151,7 +154,8 @@ const server = http.createServer((req, res) => {
       res.end(xml);
       return;
     }
-    if (urlPath === '/') urlPath = '/index.html';
+    // dizin isteği → o dizinin index.html'i ("/" ve "/en/" gibi)
+    if (urlPath.endsWith('/')) urlPath += 'index.html';
     const safePath = path.normalize(path.join(ROOT, urlPath));
     // kardeş dizin prefix bypass'ına karşı ayraçlı karşılaştırma (…/draftversusX != …/draftversus)
     if (safePath !== ROOT && !safePath.startsWith(ROOT + path.sep)) { res.writeHead(403); res.end('Forbidden'); return; }
