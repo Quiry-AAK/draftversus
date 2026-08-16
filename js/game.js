@@ -198,6 +198,37 @@
     return `<div class="screen-head"><div class="screen-num">${num}</div>
       <div><div class="screen-title">${title}</div><div class="screen-sub">${sub}</div></div></div>`;
   }
+  /* ---------- Ödüllü reklam yardımcıları ----------
+     İlke: sağlayıcı yokken buton HİÇ gösterilmez (tıklanıp bir şey olmayan
+     buton kötü deneyim). Sağlayıcı (portal SDK / AdSense H5) bağlanınca
+     butonlar kendiliğinden belirir — oyun koduna dokunmadan.
+     Ödüller yalnızca kolaylık sağlar, güç vermez: kilitli içerik açmaz,
+     rakibi zayıflatmaz, online adaleti etkilemez. */
+  function rewardReady() { return !!(window.KD_ADS && KD_ADS.rewardedReady()); }
+  function rewardBtn(id, label, cls) {
+    if (!rewardReady()) return '';
+    return `<button class="btn btn-ghost rw-btn ${cls || ''}" id="${id}" type="button">📺 ${label}</button>`;
+  }
+  /* Butonu ödüle bağlar: reklam izlenirse grant() çalışır, izlenmezse sessiz geçer. */
+  function bindReward(id, placement, grant, okMsg) {
+    const b = document.getElementById(id);
+    if (!b || !rewardReady()) return;
+    b.onclick = async () => {
+      b.disabled = true;
+      const old = b.textContent; b.textContent = '…';
+      let ok = false;
+      try { ok = await KD_ADS.rewarded(placement); } catch (_) {}
+      b.textContent = old; b.disabled = false;
+      if (ok) {
+        try { grant(); } catch (_) {}
+        if (okMsg) toast(okMsg);
+        if (window.KD_ANALYTICS) KD_ANALYTICS.event('rewarded_grant', { placement });
+        render();
+      } else {
+        toast(T('Reklam şu an yüklenemedi'));
+      }
+    };
+  }
   /* Seviye çubuğu — "bir tur daha" motorunun görünen yüzü: nerede olduğunu
      ve sıradaki açılımın ne olduğunu gösterir. */
   function metaBarHTML() {
@@ -280,7 +311,7 @@
           ? T('Bugünü tamamladın. Yeni havuza kalan süre: ') + KD_DAILY.untilReset()
           : T('Bugün herkes aynı draft havuzuyla oynuyor. Aynı adaylardan en iyi kadroyu sen kurabilir misin?')}</div>
       </div>
-      <div class="dc-right">${right}${done ? `<button class="btn btn-ghost" id="daily-share" style="padding:9px 16px;font-size:13px">📣 ${T('Paylaş')}</button>` : ''}</div>
+      <div class="dc-right">${right}${done ? `<button class="btn btn-ghost" id="daily-share" style="padding:9px 16px;font-size:13px">📣 ${T('Paylaş')}</button>` : ''}${done ? rewardBtn('rw-daily', T('Tekrar dene')) : ''}</div>
     </section>`;
   }
   function bindDailyCard() {
@@ -290,6 +321,9 @@
       if (window.KD_ANALYTICS) KD_ANALYTICS.event('daily_start', { id: KD_DAILY.id() });
       startSeries(true);
     };
+    bindReward('rw-daily', 'daily_retry', () => {
+      try { localStorage.removeItem('kd_daily_v1'); } catch (_) {}
+    }, T('Bugünkü havuz yeniden açıldı'));
     const sh = document.getElementById('daily-share');
     if (sh && window.KD_SHARE) sh.onclick = async () => {
       const d = KD_DAILY.read(); if (!d) return;
@@ -1684,7 +1718,9 @@
           <div class="bn">${b.name.split('. ')[1] || b.name}</div>
           <div class="bf" style="background:${inj ? '#fde2e8' : fm.bg};color:${inj ? '#e5484d' : fm.col}">${inj ? '➕ Sakat' : fm.label}</div></div>`;
       }).join('');
-      rightPanel = `<div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Oyuncu Değişikliği</div><div class="mono" style="color:#13a76a;background:#e7f8f0;padding:3px 8px;border-radius:6px;font-size:10px">${G.match.subsLeft} hak</div></div>
+      const subExtra = (G.match.subsLeft <= 0) ? rewardBtn('rw-sub', T('+1 değişiklik hakkı'), 'rw-inline') : '';
+      rightPanel = `<div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Oyuncu Değişikliği</div><div class="mono" style="color:${G.match.subsLeft > 0 ? '#13a76a' : '#e5484d'};background:${G.match.subsLeft > 0 ? '#e7f8f0' : '#fdeced'};padding:3px 8px;border-radius:6px;font-size:10px">${G.match.subsLeft} hak</div></div>
+        ${subExtra ? `<div style="margin-bottom:10px">${subExtra}</div>` : ''}
         ${out ? `<div style="border:1.5px solid #f3c6c8;background:#fdeced;border-radius:11px;padding:10px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:9px;background:#e5484d;display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(out)}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:13px">${out.name}</div><div class="mono" style="font-size:9px;color:#cf8589">${out.pos} · Güç ${out.ovr}</div></div><div style="font:800 8.5px 'Hanken Grotesk';color:#e5484d;background:#fff;border:1px solid #f3c6c8;padding:4px 7px;border-radius:6px">↓ ÇIKIYOR</div></div>` : '<div class="muted" style="font-size:11.5px;margin-bottom:10px">Sahadan çıkacak oyuncuya dokun.</div>'}
         <div style="text-align:center;font-size:15px;color:#9aa1ac;margin:1px 0 8px">⇅</div>
         <div class="label" style="font-size:10px;margin-bottom:8px">Yedekten Gelecek ${out ? '<span class="muted" style="font-weight:600;text-transform:none">· dokun, anında değişir</span>' : ''}</div>
@@ -1738,6 +1774,20 @@
   }
   function bindPanel() {
     const done = G.match.halftime ? resumeHalftime : closePanel;
+    // Ödüllü: değişiklik hakkı bittiğinde +1 hak (paneli kapatmadan yenilenir)
+    if (rewardReady() && document.getElementById('rw-sub')) {
+      const b = document.getElementById('rw-sub');
+      b.onclick = async () => {
+        b.disabled = true; const old = b.textContent; b.textContent = '…';
+        let ok = false; try { ok = await KD_ADS.rewarded('match_extra_sub'); } catch (_) {}
+        b.disabled = false; b.textContent = old;
+        if (ok) {
+          G.match.subsLeft += 1;
+          if (window.KD_ANALYTICS) KD_ANALYTICS.event('rewarded_grant', { placement: 'match_extra_sub' });
+          toast(T('+1 değişiklik hakkı')); renderPanel();
+        } else toast(T('Reklam şu an yüklenemedi'));
+      };
+    }
     document.querySelectorAll('[data-pmode]').forEach(b => b.onclick = () => { G.match.panelMode = b.dataset.pmode; G.match.sel = null; renderPanel(); });
     document.getElementById('panel-close').onclick = done;
     const cancelBtn = document.getElementById('panel-cancel'); if (cancelBtn) cancelBtn.onclick = done;
@@ -2138,7 +2188,7 @@
             </div>
           </div>
           ${matchStatsCardHTML()}
-          <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><button class="btn btn-green" id="to-duello">Düello'ya Geç →</button></div>
+          <div class="between" style="flex-wrap:wrap;gap:14px"><div class="muted" style="font-size:12.5px">Gelişimi gördün — sıradaki maç için yeni çalma turuna geç.</div><div class="row-actions">${rewardBtn('rw-rest', T('Kadroyu dinlendir'))}<button class="btn btn-green" id="to-duello">Düello'ya Geç →</button></div></div>
         </div>
       </div>
     </div>`;
@@ -2171,13 +2221,24 @@
     const inj = (G.me.squad || []).filter(p => p.injuredMatches > 0);
     if (!inj.length) return '';
     const list = inj.map(p => `${p.name} <span style="color:#b86">(${p.injuredMatches} maç)</span>`).join(' · ');
-    return `<div style="border:1px solid #f3c6c8;background:#fdeced;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#e5484d;margin-bottom:4px">➕ Sakatlar — sıradaki maçta yok</div><div style="font:500 11.5px 'Hanken Grotesk';color:#a05055;line-height:1.5">${list}</div></div>`;
+    const rw = rewardBtn('rw-heal', T('Tedavi et (1 maç azalt)'), 'rw-inline');
+    return `<div style="border:1px solid #f3c6c8;background:#fdeced;border-radius:14px;padding:13px 15px"><div style="font:700 11px 'Hanken Grotesk';color:#e5484d;margin-bottom:4px">➕ Sakatlar — sıradaki maçta yok</div><div style="font:500 11.5px 'Hanken Grotesk';color:#a05055;line-height:1.5">${list}</div>${rw ? `<div style="margin-top:9px">${rw}</div>` : ''}</div>`;
   }
   function bindBetween() {
     document.getElementById('to-duello').onclick = () => {
       if (isOnline()) { onlineBetweenReady(); return; }
       G.series.matchNo++; goDuello();
     };
+    // Ödüllü: sakat oyuncunun dönüşünü bir maç öne çek
+    bindReward('rw-heal', 'between_heal', () => {
+      const inj = (G.me.squad || []).filter(p => p.injuredMatches > 0)
+        .sort((a, b) => b.ovr - a.ovr);
+      if (inj[0]) inj[0].injuredMatches = Math.max(0, inj[0].injuredMatches - 1);
+    }, T('Tedavi uygulandı'));
+    // Ödüllü: kadroyu dinlendir (yorgunluk maçlar arası zaten toparlanıyor, bu ek destek)
+    bindReward('rw-rest', 'between_rest', () => {
+      (G.me.squad || []).forEach(p => { p.condition = Math.min(100, (p.condition != null ? p.condition : 100) + 15); });
+    }, T('Kadro dinlendirildi'));
   }
 
   /* ============================================================
