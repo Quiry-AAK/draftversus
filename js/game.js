@@ -38,7 +38,7 @@
   /* Ağdan gelen kulübü, oyuncu nesnelerini paylaşacak şekilde yeniden kur. */
   function deserializeClub(s) {
     s.name = cleanText(s.name, 22);
-    s.squad.forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); });
+    s.squad.forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); p.region = cleanText(p.region, 4); });
     const byId = {}; s.squad.forEach(p => byId[p.id] = p);
     const club = { name: s.name, color: s.color, side: s.side,
       formation: s.formation, philosophy: s.philosophy, mentality: s.mentality,
@@ -197,6 +197,14 @@
   function head(num, title, sub) {
     return `<div class="screen-head"><div class="screen-num">${num}</div>
       <div><div class="screen-title">${title}</div><div class="screen-sub">${sub}</div></div></div>`;
+  }
+  /* Oyuncu kartındaki köken rozeti — kimlik hissi için (kurgusal, lisans yok).
+     Emoji bayrak desteklenmeyen sistemlerde harf kodu görünür, ikisi de okunur. */
+  function regionBadge(p) {
+    if (!p || !p.region) return '';
+    const R = (window.KD_DATA && KD_DATA.REGIONS) ? KD_DATA.REGIONS[p.region] : null;
+    if (!R) return '';
+    return `<span class="rg-badge" title="${p.region}">${R.flag}</span>`;
   }
   function colorSwatches(sel, attr) {
     return CLUB_COLORS.map((c, i) => `<div class="sw-opt ${i === sel ? 'sel' : ''}" ${attr}="${i}" style="background:${c}"></div>`).join('');
@@ -503,7 +511,7 @@
       case 'start':
         if (m.host) m.host.name = cleanText(m.host.name, 22);
         if (m.guest) m.guest.name = cleanText(m.guest.name, 22);
-        (m.pool || []).forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); });
+        (m.pool || []).forEach(p => { p.name = cleanText(p.name, 26); p.pos = cleanText(p.pos, 4); p.region = cleanText(p.region, 4); });
         startOnlineSeriesGuest(m); break;
       case 'd-formation': if (G.opp) G.opp.formation = m.f; if (G.screen === 'draft') render(); break;
       case 'd-open-pick': {
@@ -821,7 +829,7 @@
           <div class="flexc" style="gap:9px;min-width:0;align-items:flex-start">
             ${avatarHTML(c, 42)}
             <div style="min-width:0">
-            <div class="nm">${c.name}</div>
+            <div class="nm">${regionBadge(c)}${c.name}</div>
             <div style="font:700 10.5px 'Hanken Grotesk';color:${flexCol};margin-top:3px">${c.type || c.pos}</div>
             <div class="flexc" style="gap:5px;margin-top:6px;flex-wrap:wrap">
               <span class="flexbadge" style="color:${flexCol};background:${flexBg}">${flexLabel}</span>

@@ -506,3 +506,6 @@ body.has-ad .site-footer { padding-bottom: calc(var(--ad-h, 90px) + 24px); }
   .daily-card .dc-right { justify-content: space-between; }
   .daily-card .dc-right .btn { flex: 1; }
 }
+/* oyuncu kartı köken rozeti */
+.rg-badge { display: inline-block; margin-right: 5px; font-size: 12px; line-height: 1;
+  filter: saturate(1.1); vertical-align: baseline; }

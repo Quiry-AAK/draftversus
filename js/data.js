@@ -121,27 +121,37 @@ function defaultTask(pos) {
 const CLUB_COLORS = ['#3b6fe0', '#e8893b', '#19c37d', '#e5484d', '#8b5cf6', '#0ea5b7', '#eab308', '#ec4899'];
 
 /* ---- İsim havuzu (karma uluslar) ---- */
-const FIRST_INITIALS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V', 'W', 'Y', 'Z'];
-const SURNAMES = [
-  // Türk
-  'Yılmaz', 'Demir', 'Şahin', 'Kaya', 'Aydın', 'Korkmaz', 'Çetin', 'Polat', 'Toprak', 'Aksoy', 'Doğan', 'Öztürk', 'Yıldız',
-  // İngiliz/İrlanda
-  'Smith', 'Walker', 'Carter', 'Bell', 'Foster', 'Reed', 'Hughes', 'Murphy', 'Kane', 'Shaw', 'Grealish', 'Ward',
-  // İspanyol/Portekiz
-  'García', 'Torres', 'Ramos', 'Silva', 'Costa', 'Mendes', 'Reyes', 'Bravo', 'Núñez', 'Vega', 'Soto', 'Lima',
-  // Alman/Hollanda
-  'Müller', 'Schneider', 'Wagner', 'Klein', 'Vermeer', 'Bakker', 'de Jong', 'Visser', 'Kraus', 'Werner',
-  // İtalyan/Fransız
-  'Rossi', 'Conti', 'Marino', 'Greco', 'Bernard', 'Laurent', 'Moreau', 'Girard', 'Lucas', 'Petit',
-  // Slav
-  'Kovač', 'Novak', 'Petrov', 'Ivanov', 'Marković', 'Horvat', 'Sokolov', 'Jankovic', 'Lewandowski', 'Kowalski',
-  // Afrika
-  'Okafor', 'Mensah', 'Diallo', 'Traoré', 'Adeyemi', 'Osei', 'Mbeki', 'Sané', 'Koné', 'Bah',
-  // Arap/Orta Doğu
-  'Hassan', 'Ahmadi', 'Karimi', 'Nasri', 'Salah', 'Haidar', 'Mansour',
-  // Asya/Latin
-  'Tanaka', 'Kim', 'Nakamura', 'Chen', 'Nguyen', 'Suzuki', 'Santos', 'Vidal', 'Herrera', 'Ortega', 'Cruz',
-];
+/* ---------- Bölgesel kimlik ----------
+   Futbolcular kurgusaldır (gerçek isim/lisans kullanılmaz), ama isim ile
+   köken tutarlı olsun diye bölge bazlı üretilir: "M. Yılmaz" Türk, "H. Shaw"
+   İngiliz gibi. Bölge kodu oyuncu kartında rozet olarak gösterilir.
+   ini: o bölgede yaygın ad baş harfleri. */
+const REGIONS = {
+  TR: { flag: '🇹🇷', ini: ['A', 'B', 'C', 'E', 'F', 'H', 'K', 'M', 'O', 'S', 'T', 'U', 'Y', 'Z'],
+        sur: ['Yılmaz', 'Demir', 'Şahin', 'Kaya', 'Aydın', 'Korkmaz', 'Çetin', 'Polat', 'Toprak', 'Aksoy', 'Doğan', 'Öztürk', 'Yıldız'] },
+  ENG: { flag: '🏴', ini: ['A', 'C', 'D', 'H', 'J', 'K', 'L', 'M', 'O', 'R', 'S', 'T', 'W'],
+        sur: ['Smith', 'Walker', 'Carter', 'Bell', 'Foster', 'Reed', 'Hughes', 'Murphy', 'Kane', 'Shaw', 'Ward', 'Bennett'] },
+  ESP: { flag: '🇪🇸', ini: ['A', 'C', 'D', 'F', 'G', 'I', 'J', 'L', 'M', 'P', 'R', 'S'],
+        sur: ['García', 'Torres', 'Ramos', 'Silva', 'Costa', 'Mendes', 'Reyes', 'Bravo', 'Núñez', 'Vega', 'Soto', 'Lima'] },
+  GER: { flag: '🇩🇪', ini: ['A', 'B', 'D', 'F', 'J', 'K', 'L', 'M', 'N', 'S', 'T'],
+        sur: ['Müller', 'Schneider', 'Wagner', 'Klein', 'Vermeer', 'Bakker', 'de Jong', 'Visser', 'Kraus', 'Werner'] },
+  ITA: { flag: '🇮🇹', ini: ['A', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'P', 'S'],
+        sur: ['Rossi', 'Conti', 'Marino', 'Greco', 'Bernard', 'Laurent', 'Moreau', 'Girard', 'Lucas', 'Petit'] },
+  SLA: { flag: '🇷🇸', ini: ['A', 'D', 'I', 'J', 'L', 'M', 'N', 'P', 'R', 'S', 'V', 'Z'],
+        sur: ['Kovač', 'Novak', 'Petrov', 'Ivanov', 'Marković', 'Horvat', 'Sokolov', 'Janković', 'Lewandowski', 'Kowalski'] },
+  AFR: { flag: '🌍', ini: ['A', 'B', 'C', 'E', 'I', 'K', 'M', 'N', 'O', 'S', 'Y'],
+        sur: ['Okafor', 'Mensah', 'Diallo', 'Traoré', 'Adeyemi', 'Osei', 'Mbeki', 'Sané', 'Koné', 'Bah'] },
+  MEA: { flag: '🇪🇬', ini: ['A', 'F', 'H', 'K', 'M', 'O', 'R', 'S', 'Y', 'Z'],
+        sur: ['Hassan', 'Ahmadi', 'Karimi', 'Nasri', 'Haidar', 'Mansour', 'Zidan'] },
+  ASI: { flag: '🇯🇵', ini: ['A', 'D', 'H', 'J', 'K', 'M', 'R', 'S', 'T', 'Y'],
+        sur: ['Tanaka', 'Kim', 'Nakamura', 'Chen', 'Nguyen', 'Suzuki', 'Park', 'Watanabe'] },
+  LAT: { flag: '🇧🇷', ini: ['A', 'C', 'D', 'E', 'F', 'G', 'J', 'L', 'M', 'P', 'R', 'S'],
+        sur: ['Santos', 'Vidal', 'Herrera', 'Ortega', 'Cruz', 'Rivera', 'Morales', 'Fonseca'] },
+};
+const REGION_KEYS = Object.keys(REGIONS);
+/* Havuz dağılımı: Türk oyuncular biraz ağır basar (hedef kitle), gerisi dengeli */
+const REGION_WEIGHTS = { TR: 3, ENG: 2, ESP: 2, GER: 2, ITA: 2, SLA: 2, AFR: 2, MEA: 1, ASI: 1, LAT: 2 };
+const REGION_BAG = REGION_KEYS.reduce((a, k) => a.concat(Array(REGION_WEIGHTS[k] || 1).fill(k)), []);
 
 let _uid = 1;
 function shortName(name) {
@@ -265,9 +275,13 @@ function makePlayer(primary, opts = {}) {
   const stats = statProfile(primary, ovr);
   Object.entries(arch.m).forEach(([k, v]) => { stats[k] = Math.max(18, Math.min(99, stats[k] + v)); });
 
+  // bölgesel kimlik: isim ile köken tutarlı olsun ("M. Yılmaz" TR, "H. Shaw" ENG)
+  const region = opts.region || pick(REGION_BAG);
+  const R = REGIONS[region] || REGIONS.TR;
   return {
     id: _uid++,
-    name: opts.name || (pick(FIRST_INITIALS) + '. ' + pick(SURNAMES)),
+    name: opts.name || (pick(R.ini) + '. ' + pick(R.sur)),
+    region,
     positions, pos: primary, type: arch.n, age, ovr, pot, stats, fatigue: 0,
     height: opts.height != null ? opts.height : genHeight(primary),
     condition: 100, injuredMatches: 0,   // maçlar arası yorgunluk (0-100) + sakatlıkla kaçırılacak maç sayısı
@@ -303,5 +317,5 @@ window.KD_DATA = {
   POS, ALL_POS, POS_GEO, posDistance, posAffinity, fitLevel, FIT_MULT, FIT_META, ARCHETYPES,
   FORMATIONS, FORMATION_NAMES, PHILOSOPHIES, MENTALITIES, FOCUS_KEYS,
   ROLES, TASKS, TASK_COL, defaultTask, CLUB_COLORS, STAT_KEYS, GK_STAT_KEYS, statKeysFor,
-  shortName, shortOf, makePlayer, buildDraftPool, rand, randi, pick, shuffle, setSeed,
+  shortName, shortOf, makePlayer, buildDraftPool, rand, randi, pick, shuffle, setSeed, REGIONS,
 };
