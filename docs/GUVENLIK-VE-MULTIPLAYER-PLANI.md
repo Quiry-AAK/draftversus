@@ -38,7 +38,9 @@
 ### Katman B — Uygulama (server.js) — ✅ TAMAMLANDI
 
 **WebSocket:**
-- ✅ `maxPayload: 4096` — 4KB üstü mesaj bağlantıyı kapatır (bellek şişirme kapandı).
+- ✅ `maxPayload: 65536` — 64KB üstü mesaj bağlantıyı kapatır (bellek şişirme kapandı).
+  *Not: ilk sürümde 4096'ydı; `start` mesajı (tüm draft havuzu) bu sınırı aştığı için
+  online maçlar hiç başlamıyordu. İki sekmeli gerçek testte yakalandı, 64KB'a çıkarıldı.*
 - ✅ IP başına eş-zamanlı WS limiti: **4** (`cf-connecting-ip` / `x-forwarded-for` önceliğiyle).
 - ✅ Soket başına mesaj hız limiti (token bucket): **40 msj/sn, patlama 80**. Aşan soket kapatılır.
 - ✅ `join` brute-force: soket başına **5 hatalı kod → 1008 ile kapat**; IP başına dakikada 10 create/join.
