@@ -280,6 +280,11 @@
     'Yeniden bağlandın': "You're reconnected",
     'Rakip aldı: ': 'Your rival took: ',
     '× hız': '× speed', ' sakat — sahaya alınamaz': ' is injured — cannot come on',
+    'Kalan puan:': 'Points left:', 'Güç': 'OVR', 'uyum': 'fit',
+    'Oynayabildiği mevkiler': 'Positions they can play', 'Enerji': 'Energy',
+    'örn. Vadi Spor': 'e.g. Valley FC', 'ÖRN. 7KQP': 'E.G. 7KQP', 'oyuncu': 'players',
+    'Kalan:': 'Left:',
+    'SAKAT (oynayamaz)': 'INJURED (unavailable)',
     // aday esneklik etiketleri · düello sonuç başlıkları · maç içi panel
     'Tek mevki': 'One position', 'Çok yönlü': 'Versatile', 'Esnek': 'Flexible',
     'Henüz seçmedin.': 'Nothing selected yet.', 'Seçildi ✓': 'Selected ✓',

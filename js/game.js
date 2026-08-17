@@ -472,7 +472,7 @@
     } else {
       body = `<div style="max-width:480px;margin:0 auto">
         <div class="label" style="margin-bottom:9px">Oda Kodu</div>
-        <input id="o-code" class="field-input" maxlength="4" value="${o.code || ''}" placeholder="ÖRN. 7KQP" style="margin-bottom:18px;text-transform:uppercase;letter-spacing:.2em;font-family:var(--mono);font-weight:800" />
+        <input id="o-code" class="field-input" maxlength="4" value="${o.code || ''}" placeholder="${T('ÖRN. 7KQP')}" style="margin-bottom:18px;text-transform:uppercase;letter-spacing:.2em;font-family:var(--mono);font-weight:800" />
         <div class="label" style="margin-bottom:9px">Kulüp Adı</div>
         <input id="o-name" class="field-input" maxlength="22" value="${o.name}" style="margin-bottom:18px" />
         <div class="label" style="margin-bottom:9px">Kulüp Rengi</div>
@@ -646,7 +646,7 @@
             </div>
 
             <div class="label" style="margin-bottom:9px">Kulüp Adı</div>
-            <input id="club-name" class="field-input" maxlength="22" value="${L.name}" placeholder="örn. Vadi Spor" style="margin-bottom:20px" />
+            <input id="club-name" class="field-input" maxlength="22" value="${L.name}" placeholder="${T('örn. Vadi Spor')}" style="margin-bottom:20px" />
 
             <div class="label" style="margin-bottom:9px">Kulüp Rengi</div>
             <div class="swatches" id="my-swatches">${sw(L.color, L.oppColor)}</div>
@@ -918,7 +918,7 @@
           <div class="ovrbox"><div class="l">GÜÇ</div><div class="v">${c.ovr}</div><div class="pot">POT ${c.pot}</div></div>
         </div>
         <div class="cand-visuals">
-          <div class="minipitch" title="Oynayabildiği mevkiler">${miniPitchSVG(c)}</div>
+          <div class="minipitch" title="${T('Oynayabildiği mevkiler')}">${miniPitchSVG(c)}</div>
           <div class="radar">${radarSVG(c.stats, statKeysFor(c))}</div>
         </div>
         <div class="pick">${locked ? 'Rakipte' : 'Seç'}</div>
@@ -1257,13 +1257,13 @@
       const dotBg = sp === 'KL' ? '#d9a017' : me.color;
       const fl = fitLevel(p, sp);
       const fitRing = fl === 'high' ? '' : fl === 'mid' ? 'outline:2px solid #d9a017;outline-offset:2px;' : 'outline:2px solid #e5484d;outline-offset:2px;';
-      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%" title="${p.name} · ${p.type || p.pos} · ${p.age} yaş · ${p.height || '–'}cm · Güç ${p.ovr} · ${POS[sp].name}">
+      return `<div class="tok ${isSel ? 'sel' : ''}" data-tslot="${i}" style="left:${x}%;top:${y}%" title="${p.name} · ${T(p.type || p.pos)} · ${p.age} ${T('yaş')} · ${p.height || '–'}cm · ${T('Güç')} ${p.ovr} · ${T(POS[sp].name)}">
         <div class="dot" style="background:${dotBg};${fitRing}">${shortOf(p)}<span class="ovr">${p.ovr}</span><span class="task" style="background:${tc}"></span></div>
         <div class="nm">${p.name}</div><span class="tasklbl" style="background:${tc}">${task}</span></div>`;
     }).join('');
     const bench = benchList(me).map((p, i) => {
       const isSel = sel && sel.bench && sel.idx === i; const inj = isInjured(p);
-      return `<div class="btok ${isSel ? 'sel' : ''} ${inj ? 'inj' : ''}" data-tbench="${i}" title="${p.name} · ${p.age} yaş · Güç ${p.ovr}${inj ? ' · SAKAT (oynayamaz)' : ''}"><div class="dot">${shortOf(p)}<span class="ovr">${p.ovr}</span></div><div class="pos">${inj ? '➕ sakat' : p.pos}</div></div>`;
+      return `<div class="btok ${isSel ? 'sel' : ''} ${inj ? 'inj' : ''}" data-tbench="${i}" title="${p.name} · ${p.age} ${T('yaş')} · ${T('Güç')} ${p.ovr}${inj ? ' · ' + T('SAKAT (oynayamaz)') : ''}"><div class="dot">${shortOf(p)}<span class="ovr">${p.ovr}</span></div><div class="pos">${inj ? '➕ sakat' : p.pos}</div></div>`;
     }).join('');
     const fmts = FORMATION_NAMES.map(n => { const lk = metaLocked('formation', n); return `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-formation="${n}"`} title="${lk ? T('Seviye ') + lk : ''}">${PHIL_LBL[n] || n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
     const phils = PHILOSOPHIES.map(n => { const lk = metaLocked('philosophy', n); return `<div class="opt-pill ${me.philosophy === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-phil="${n}"`} title="${lk ? T('Seviye ') + lk : ''}">${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
@@ -1287,7 +1287,7 @@
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">${phils}</div>
           <div class="label" style="margin-bottom:11px">Mentalite <span class="mono" style="color:var(--green-d);font-weight:700;font-size:10px">${me.mentality}</span></div>
           <div class="ment-track"><div class="ment-rail"><div class="bar"></div><div class="knob" style="left:${mentIdx / 4 * 100}%"></div></div><div class="labels">${mentLbls}</div></div>
-          <div class="between" style="margin-bottom:5px"><div class="label">Takım Odağı</div><div class="mono" style="font-size:10px;color:${fLeft > 0 ? 'var(--green-d)' : '#9aa1ac'};font-weight:700">Kalan puan: ${fLeft} / ${FOCUS_BUDGET}</div></div>
+          <div class="between" style="margin-bottom:5px"><div class="label">Takım Odağı</div><div class="mono" style="font-size:10px;color:${fLeft > 0 ? 'var(--green-d)' : '#9aa1ac'};font-weight:700">${T('Kalan puan:')} ${fLeft} / ${FOCUS_BUDGET}</div></div>
           <div class="muted" style="font-size:10.5px;margin-bottom:11px;line-height:1.4">Tüm puanlar sende — alanlara dağıt. Dolu bir kademeye tekrar dokun → düşür (0'a kadar inebilir).</div>
           <div style="display:grid;gap:11px">${focusRows}</div>
         </div>
@@ -1308,7 +1308,7 @@
         </div>
 
         <div class="rail left">
-          <div style="text-align:center"><div class="label" style="font-size:10px">Yedekler</div><div class="mono" style="color:#9aa1ac;font-size:9px;margin-top:3px">${benchList(me).length} oyuncu</div></div>
+          <div style="text-align:center"><div class="label" style="font-size:10px">Yedekler</div><div class="mono" style="color:#9aa1ac;font-size:9px;margin-top:3px">${benchList(me).length} ${T('oyuncu')}</div></div>
           ${bench}
           <div style="margin-top:6px;font:600 8.5px 'Hanken Grotesk';color:#aeb4be;text-align:center;line-height:1.3">${T('seç →')}<br>${T('sahaya at')}</div>
         </div>
@@ -1343,10 +1343,10 @@
     return `<div class="card" style="overflow:hidden;margin-bottom:16px">
       <div class="flexc" style="gap:11px;padding:13px;background:#f4f8fe;border-bottom:1px solid var(--line2)">
         <div style="width:36px;height:36px;border-radius:9px;background:${G.me.color};display:flex;align-items:center;justify-content:center;font:800 12px var(--mono);color:#fff">${shortOf(p)}</div>
-        <div><div style="font-family:var(--arch);font-weight:800;font-size:15px">${p.name}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${onPitch ? POS[curPos].name : p.pos} · Güç ${p.ovr} · ${p.age} yaş · ${p.height || '–'}cm</div></div>
+        <div><div style="font-family:var(--arch);font-weight:800;font-size:15px">${p.name}</div><div class="mono" style="font-size:10.5px;color:#9aa1ac">${onPitch ? POS[curPos].name : p.pos} · ${T('Güç')} ${p.ovr} · ${p.age} ${T('yaş')} · ${p.height || '–'}cm</div></div>
       </div>
       <div style="padding:13px">
-        <div class="flexc" style="gap:6px;flex-wrap:wrap;margin-bottom:11px"><span class="flexbadge" style="color:#7c5cd6;background:#f3eefe">${p.type || p.pos}</span><span class="chip">${p.height || '–'} cm</span><span class="chip">${p.age} yaş</span></div>
+        <div class="flexc" style="gap:6px;flex-wrap:wrap;margin-bottom:11px"><span class="flexbadge" style="color:#7c5cd6;background:#f3eefe">${p.type || p.pos}</span><span class="chip">${p.height || '–'} cm</span><span class="chip">${p.age} ${T('yaş')}</span></div>
         <div class="label" style="font-size:10px;margin-bottom:8px">Oynayabildiği Mevkiler</div>
         <div class="flexc" style="gap:5px;flex-wrap:wrap;margin-bottom:6px">${posChips}</div>
         ${onPitch ? `<div style="font:600 11px 'Hanken Grotesk';color:${fm.col};margin-bottom:13px">${T('Bu mevkide uyum:')} <b>${T(fm.label)}</b>${curFit === 'low' ? T(' — kötü oynar') : curFit === 'none' ? T(' — bu mevkide oynayamaz') : ''}</div>` : '<div style="margin-bottom:13px"></div>'}
@@ -1756,7 +1756,7 @@
       const stCol = stam >= 70 ? '#19c37d' : stam >= 45 ? '#eab308' : '#e5484d';
       return `<div class="tok ${isSel ? 'sel' : ''}" data-pslot="${i}" style="left:${x}%;top:${y}%">
         <div class="dot" style="background:${sp === 'KL' ? '#d9a017' : me.color};${off ? 'box-shadow:0 0 0 3px #e5484d' : ''}">${shortOf(p)}<span class="ovr">${p.ovr}</span><span class="task" style="background:${tc}"></span>${carded ? '<span class="card-mark"></span>' : ''}</div>
-        <div class="stam-bar" title="Enerji ${stam}%"><div style="width:${stam}%;background:${stCol}"></div></div>
+        <div class="stam-bar" title="${T('Enerji')} ${stam}%"><div style="width:${stam}%;background:${stCol}"></div></div>
         <div class="nm" style="${carded ? 'color:#b8870a;font-weight:800' : ''}">${p.name}${carded ? ' 🟨' : ''}</div>${off ? '<span class="tasklbl" style="background:#e5484d">↓ Çıkıyor</span>' : ''}</div>`;
     }).join('');
     const fmts = FORMATION_NAMES.map(n => { const lk = metaLocked('formation', n); return `<div class="fmt-mini ${me.formation === n ? 'sel' : ''}${lk ? ' locked' : ''}" ${lk ? '' : `data-pformation="${n}"`}>${n}${lk ? ` <span class="lk">🔒${lk}</span>` : ''}</div>`; }).join('');
@@ -1774,15 +1774,15 @@
         const on = G.match.subIn === b.id;
         const inj = isInjured(b);
         // top (jeton) şeklinde yedek oyuncu
-        return `<div class="sub-tok ${on ? 'on' : ''} ${inj ? 'inj' : ''}" data-pin="${b.id}" title="${b.name} · ${b.age} yaş · ${inj ? 'SAKAT (oynayamaz)' : fm.label + ' uyum'}">
+        return `<div class="sub-tok ${on ? 'on' : ''} ${inj ? 'inj' : ''}" data-pin="${b.id}" title="${b.name} · ${b.age} ${T('yaş')} · ${inj ? T('SAKAT (oynayamaz)') : T(fm.label) + ' ' + T('uyum')}">
           <div class="dot" style="background:${b.pos === 'KL' ? '#d9a017' : me.color};${on ? 'box-shadow:0 0 0 3px #19c37d,0 4px 10px -3px rgba(0,0,0,.45)' : ''}">${shortOf(b)}<span class="ovr">${b.ovr}</span></div>
           <div class="bn">${b.name.split('. ')[1] || b.name}</div>
           <div class="bf" style="background:${inj ? '#fde2e8' : fm.bg};color:${inj ? '#e5484d' : fm.col}">${inj ? '➕ Sakat' : fm.label}</div></div>`;
       }).join('');
       const subExtra = (G.match.subsLeft <= 0) ? rewardBtn('rw-sub', T('+1 değişiklik hakkı'), 'rw-inline') : '';
-      rightPanel = `<div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Oyuncu Değişikliği</div><div class="mono" style="color:${G.match.subsLeft > 0 ? '#13a76a' : '#e5484d'};background:${G.match.subsLeft > 0 ? '#e7f8f0' : '#fdeced'};padding:3px 8px;border-radius:6px;font-size:10px">${G.match.subsLeft} hak</div></div>
+      rightPanel = `<div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Oyuncu Değişikliği</div><div class="mono" style="color:${G.match.subsLeft > 0 ? '#13a76a' : '#e5484d'};background:${G.match.subsLeft > 0 ? '#e7f8f0' : '#fdeced'};padding:3px 8px;border-radius:6px;font-size:10px">${G.match.subsLeft} ${T('hak')}</div></div>
         ${subExtra ? `<div style="margin-bottom:10px">${subExtra}</div>` : ''}
-        ${out ? `<div style="border:1.5px solid #f3c6c8;background:#fdeced;border-radius:11px;padding:10px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:9px;background:#e5484d;display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(out)}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:13px">${out.name}</div><div class="mono" style="font-size:9px;color:#cf8589">${out.pos} · Güç ${out.ovr}</div></div><div style="font:800 8.5px 'Hanken Grotesk';color:#e5484d;background:#fff;border:1px solid #f3c6c8;padding:4px 7px;border-radius:6px">↓ ÇIKIYOR</div></div>` : '<div class="muted" style="font-size:11.5px;margin-bottom:10px">Sahadan çıkacak oyuncuya dokun.</div>'}
+        ${out ? `<div style="border:1.5px solid #f3c6c8;background:#fdeced;border-radius:11px;padding:10px 11px;display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:9px;background:#e5484d;display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(out)}</div><div style="flex:1"><div style="font-family:var(--arch);font-weight:800;font-size:13px">${out.name}</div><div class="mono" style="font-size:9px;color:#cf8589">${out.pos} · ${T('Güç')} ${out.ovr}</div></div><div style="font:800 8.5px 'Hanken Grotesk';color:#e5484d;background:#fff;border:1px solid #f3c6c8;padding:4px 7px;border-radius:6px">↓ ÇIKIYOR</div></div>` : '<div class="muted" style="font-size:11.5px;margin-bottom:10px">Sahadan çıkacak oyuncuya dokun.</div>'}
         <div style="text-align:center;font-size:15px;color:#9aa1ac;margin:1px 0 8px">⇅</div>
         <div class="label" style="font-size:10px;margin-bottom:8px">Yedekten Gelecek ${out ? '<span class="muted" style="font-weight:600;text-transform:none">· dokun, anında değişir</span>' : ''}</div>
         <div class="sub-tok-grid">${benchRows}</div>
@@ -1795,7 +1795,7 @@
         const roles = (ROLES[curPos] || []).map(r => `<div class="role-opt ${sel.role === r ? 'sel' : ''}" data-prole="${r}">${r}${sel.role === r ? ' <span class="mono">✓</span>' : ''}</div>`).join('');
         const tasks = TASKS.map(t => { const col = TASK_COL[t]; const on = (sel.task || defaultTask(curPos)) === t; return `<div class="t ${on ? 'sel' : ''}" data-ptask="${t}" style="${on ? `border:1.5px solid ${col};background:${col}1a;color:${col}` : ''}">${t}</div>`; }).join('');
         rightPanel = `<div class="label" style="font-size:10px;margin-bottom:9px">Seçili Oyuncu · Rol</div>
-          <div class="flexc" style="gap:10px;background:#f4f8fe;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:13px"><div style="width:32px;height:32px;border-radius:9px;background:${me.color};display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(sel)}</div><div><div style="font-family:var(--arch);font-weight:800;font-size:13px">${sel.name}</div><div class="mono" style="font-size:9px;color:#9aa1ac">${curPos} · Güç ${sel.ovr} · ${sel.age}y · ${sel.height || '–'}cm</div><div style="font:700 9px 'Hanken Grotesk';color:#7c5cd6;margin-top:1px">${sel.type || ''}</div></div></div>
+          <div class="flexc" style="gap:10px;background:#f4f8fe;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:13px"><div style="width:32px;height:32px;border-radius:9px;background:${me.color};display:flex;align-items:center;justify-content:center;font:800 10px var(--mono);color:#fff">${shortOf(sel)}</div><div><div style="font-family:var(--arch);font-weight:800;font-size:13px">${sel.name}</div><div class="mono" style="font-size:9px;color:#9aa1ac">${curPos} · ${T('Güç')} ${sel.ovr} · ${sel.age}y · ${sel.height || '–'}cm</div><div style="font:700 9px 'Hanken Grotesk';color:#7c5cd6;margin-top:1px">${sel.type || ''}</div></div></div>
           <div style="display:grid;gap:6px;margin-bottom:14px">${roles}</div>
           <div class="label" style="font-size:10px;margin-bottom:8px">Sahadaki Görevi</div><div class="task-seg">${tasks}</div>`;
       } else {
@@ -1817,7 +1817,7 @@
           <div class="g3" style="gap:6px;margin-bottom:16px">${fmts}</div>
           <div class="label" style="font-size:10px;margin-bottom:10px">Mentalite <span class="mono" style="color:var(--green-d);font-weight:700">${me.mentality}</span></div>
           <div class="ment-track"><div class="ment-rail"><div class="bar"></div><div class="knob" style="left:${mentIdx / 4 * 100}%"></div></div><div class="labels">${MENTALITIES.map((n, i) => `<span class="${i === mentIdx ? 'sel' : ''}" data-pment="${i}" style="font-size:8px">${n}</span>`).join('')}</div></div>
-          <div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Takım Odağı</div><div class="mono" style="font-size:9px;color:${pLeft > 0 ? 'var(--green-d)' : '#9aa1ac'};font-weight:700">Kalan: ${pLeft}</div></div>
+          <div class="between" style="margin-bottom:11px"><div class="label" style="font-size:10px">Takım Odağı</div><div class="mono" style="font-size:9px;color:${pLeft > 0 ? 'var(--green-d)' : '#9aa1ac'};font-weight:700">${T('Kalan:')} ${pLeft}</div></div>
           <div style="display:grid;gap:9px">${focusRows}</div>
         </div>
         <div style="padding:15px;display:flex;flex-direction:column;align-items:center;background:#fbfcfd">
@@ -1920,7 +1920,7 @@
     G.match.subsLeft--; G.match.subOut = null; G.match.subIn = null;
     refresh();
     logSub(inP, outP, me);
-    const sl = document.getElementById('subs-left'); if (sl) sl.textContent = G.match.subsLeft + ' hak';
+    const sl = document.getElementById('subs-left'); if (sl) sl.textContent = G.match.subsLeft + ' ' + T('hak');
     toast(T('Değişiklik yapıldı: ') + inP.name + ' oyunda');
     renderPanel();
   }
