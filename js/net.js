@@ -42,7 +42,13 @@
   }
   function isOpen() { return NET.ws && NET.ws.readyState === 1; }
 
-  NET.available = function () { return !!location.host; };
+  /* Online yalnızca kendi sunucumuzda mümkün. Portal paketinde (CrazyGames vb.)
+     oyun portalın alan adından servis edilir; oradaki WebSocket sunucusu bize
+     ait değildir, bu yüzden online mod baştan kapatılır. */
+  NET.available = function () {
+    if ((window.KD_CONFIG || {}).BUILD === 'portal') return false;
+    return !!location.host;
+  };
   NET.on = function (fn) { NET._handlers.push(fn); };
   function emit(msg) { NET._handlers.forEach(h => { try { h(msg); } catch (e) { console.error(e); } }); }
 

@@ -5,6 +5,16 @@
    (kod yüklenmez, konsol hatası olmaz).
    ============================================================ */
 window.KD_CONFIG = {
+  /* ---------- Derleme hedefi: 'own' | 'portal' ----------
+     'own'    → draftversus.com: AdSense/Adsterra, çerez bildirimi, online 1v1.
+     'portal' → CrazyGames/Poki gibi portallar: KENDİ reklam ağlarımız HİÇ
+                yüklenmez (iki reklam ağı aynı anda = sözleşme ihlali),
+                çerez bildirimi çıkmaz (portal kendi onayını yönetir),
+                reklam/ödüllü video tamamen portal SDK'sına devredilir.
+     Portal sürümünde index.html, config.js'ten ÖNCE
+     `window.KD_BUILD='portal'` tanımlar; burayı düzenlemek gerekmez. */
+  BUILD: (typeof window.KD_BUILD === 'string' ? window.KD_BUILD : 'own'),
+
   /* Google Analytics 4
      analytics.google.com → Yönetici → Veri Akışları → akışını seç
      → "Ölçüm Kimliği" (G-XXXXXXXXXX) buraya. */

@@ -12,6 +12,33 @@
    ============================================================ */
 (function () {
   const CFG = window.KD_CONFIG || {};
+
+  /* ---------- Portal derlemesi: kendi reklam ağlarımız devre dışı ----------
+     CrazyGames/Poki sözleşmeleri oyunun içinde başka bir reklam ağı
+     çalıştırılmasını yasaklar. Bu modda banner hiç basılmaz, AdSense ve
+     Adsterra script'leri HİÇ yüklenmez; reklam işi tamamen portal SDK'sına
+     (js/portal.js) devredilir. Oyun kodu aynı API'yi çağırmaya devam eder. */
+  if (CFG.BUILD === 'portal') {
+    window.KD_ADS = {
+      onScreen() {},
+      rewarded(placement) {
+        if (typeof window.KD_REWARDED_PROVIDER === 'function') {
+          try { return Promise.resolve(window.KD_REWARDED_PROVIDER(placement)).then(v => !!v).catch(() => false); }
+          catch (_) { return Promise.resolve(false); }
+        }
+        return Promise.resolve(false);
+      },
+      rewardedReady() { return typeof window.KD_REWARDED_PROVIDER === 'function'; },
+      moment(name) {
+        const p = window.KD_PORTAL;
+        if (p && typeof p.moment === 'function') { try { p.moment(name); } catch (_) {} }
+      },
+      network: 'portal',
+      verifying: false,
+    };
+    return;
+  }
+
   const S = CFG.ADSENSE || {};
   const A = CFG.ADSTERRA || {};
   const HAS_CLIENT = !!S.client;

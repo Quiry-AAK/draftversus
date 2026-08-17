@@ -32,16 +32,24 @@ window.HTMLCanvasElement.prototype.getContext = () => ctxProxy;
 let errors = [];
 window.addEventListener('error', e => errors.push(e.message || String(e.error)));
 
+/* Dil sabitlensin: jsdom navigator.language 'en-US' döndürdüğü için test
+   yanlışlıkla İngilizce sürümü sürerdi. Varsayılan TR; KD_LANG=en ile EN. */
+window.KD_FORCE_LANG = process.env.KD_LANG === 'en' ? 'en' : 'tr';
+
 // ---- kodları yükle ----
+/* index.html'deki sırayla YÜKLE. Eksik modül bırakmak testi yanıltır:
+   game.js bazı global'lere (KD_DAILY, KD_META…) çıplak isimle eriştiği için
+   modül yoksa test gerçekte olmayan bir ReferenceError'la patlar. */
 function run(code, name) { try { window.eval(code); } catch (e) { console.error('LOAD ERROR ' + name + ':', e); process.exit(1); } }
-run(read('js/data.js'), 'data');
-run(read('js/engine.js'), 'engine');
-run(read('js/net.js'), 'net');
-run(read('js/game.js'), 'game');
+['config', 'i18n', 'profile', 'meta', 'daily', 'data', 'engine', 'net', 'game']
+  .forEach(n => run(read('js/' + n + '.js'), n));
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
-const click = el => { if (!el) return false; if (typeof el.onclick === 'function') el.onclick({ preventDefault(){}, dataTransfer:{getData(){return '';},setData(){}} }); return true; };
+/* Gerçek tarayıcı gibi bir olay nesnesi geçir: `onclick = fn` biçiminde
+   bağlanan bir işleyici ilk argümanı parametre sanarsa test bunu yakalar
+   (create-room'un startSeries'e MouseEvent geçirdiği hata böyle bulundu). */
+const click = el => { if (!el) return false; if (typeof el.onclick === 'function') el.onclick({ type: 'click', preventDefault(){}, stopPropagation(){}, dataTransfer:{getData(){return '';},setData(){}} }); return true; };
 
 function drainRaf(maxFrames, onFrame) {
   let n = 0;
@@ -57,6 +65,9 @@ function screenStep() {
   // appbar'daki aktif adımı oku
   const a = $('.step.active'); return a ? a.textContent : '?';
 }
+/* Adım adları çevrildiği için karşılaştırma dile göre yapılır:
+   KD_LANG=en node test/harness.js  → İngilizce sürümü de aynı testle sürer. */
+const T = (s) => (window.KD_I18N ? window.KD_I18N.T(s) : s);
 
 // ---- 0. ANA EKRAN (mod seçimi) ----
 if (!$('#mode-ai-btn')) throw new Error('ana ekran render edilmedi');
@@ -70,12 +81,12 @@ let guard = 0;
 function playSeries() {
   while (guard++ < 40) {
     const step = screenStep();
-    if (step === 'Draft') { doDraft(); }
-    else if (step === 'Düello') { doDuello(); }
-    else if (step === 'Taktik') { doTactics(); }
-    else if (step === 'Maç') { doMatch(); }
-    else if (step === 'Maç Arası') { click($('#to-duello')); }
-    else if (step === 'Sonuç') { return 'SONUÇ'; }
+    if (step === T('Draft')) { doDraft(); }
+    else if (step === T('Düello')) { doDuello(); }
+    else if (step === T('Taktik')) { doTactics(); }
+    else if (step === T('Maç')) { doMatch(); }
+    else if (step === T('Maç Arası')) { click($('#to-duello')); }
+    else if (step === T('Sonuç')) { return 'SONUÇ'; }
     else throw new Error('bilinmeyen ekran: ' + step);
   }
   throw new Error('seri bitmedi (guard)');
@@ -86,7 +97,7 @@ function doDraft() {
   while ($('[data-pick]') && i++ < 60) {
     click($('[data-pick]'));   // hep ilk adayı seç (açan da, kalan-5'ten alan da)
   }
-  if (screenStep() === 'Draft') throw new Error('draft bitmedi, ' + i + ' seçim');
+  if (screenStep() === T('Draft')) throw new Error('draft bitmedi, ' + i + ' seçim');
 }
 
 function doDuello() {
@@ -116,18 +127,23 @@ let halftimes = 0, aiSubsTried = 0;
 function doMatch() {
   // loop başladı, rAF kuyruğunda bir frame var
   let safety = 0;
-  while (screenStep() === 'Maç' && safety++ < 200) {
+  while (screenStep() === T('Maç') && safety++ < 200) {
     drainRaf(3000, () => { intervals.forEach(cb => { try { cb(); } catch(e){ errors.push('interval: '+e.message); } }); aiSubsTried++; });
     // devre arası / uzatma paneli açıldıysa devam et (auto açılan tek panel bu)
     const apply = $('#panel-apply');
-    if (apply && /Başlat|Devam Et/.test(apply.textContent)) { halftimes++; click(apply); }
+    if (apply && new RegExp(T('Başlat') + '|' + T('Devam Et') + '|' + T('İkinci Yarıyı Başlat')).test(apply.textContent)) { halftimes++; click(apply); }
     else if (!rafQ.length) {
       // kuyruk boş ve hâlâ maçtaysak: olası takılma — interval ile ilerlet
       intervals.forEach(cb => { try { cb(); } catch(e){} });
       if (!rafQ.length) break;
     }
   }
-  if (screenStep() === 'Maç') throw new Error('maç bitmedi (safety), halftimes=' + halftimes);
+  if (screenStep() === T('Maç')) {
+    const ap = $('#panel-apply');
+    throw new Error('maç bitmedi (safety), halftimes=' + halftimes
+      + ' | panel-apply=' + (ap ? JSON.stringify(ap.textContent) : 'yok')
+      + ' | rafQ=' + rafQ.length + ' | hatalar=' + JSON.stringify(errors.slice(0,3)));
+  }
 }
 
 const result = playSeries();

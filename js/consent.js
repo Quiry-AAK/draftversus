@@ -9,6 +9,10 @@
 (function () {
   try { if (localStorage.getItem('kd_cookie_ok')) return; } catch (_) { return; }
   const c = window.KD_CONFIG || {};
+  /* Portal derlemesi: kendi reklam ağımız yok ve onay yönetimi portala ait —
+     üstüne ikinci bir çerez çubuğu basmak hem gereksiz hem de gizlilik
+     sayfamıza kırık bağlantı verir (o sayfa pakete girmiyor). */
+  if (c.BUILD === 'portal') return;
   const a = c.ADSTERRA || {};
   const s = c.ADSENSE || {};
   if (!c.GA_ID && !s.client && !a.banner728 && !a.banner320 && !a.socialBarSrc) return;

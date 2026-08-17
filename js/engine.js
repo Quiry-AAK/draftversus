@@ -9,6 +9,9 @@
   const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   const lerpf = (a, b, t) => a + (b - a) * t;
   const surOf = (p) => p ? (p.name.split('. ')[1] || p.name) : '';
+  /* Saha üstü yazılar canvas'a çiziliyor; DOM çevirisi (translateHTML) onlara
+     ulaşamaz, bu yüzden çizim anında kalıp çevirisinden geçerler. */
+  const PH = (t) => (window.KD_I18N && window.KD_I18N.phrase) ? window.KD_I18N.phrase(t) : t;
   /* Motorun ihtiyaç duyduğu jenerik statlar — kaleci ayrı stat setinden (REF/KON/ELK/AYK) eşlenir. */
   function engStats(pl) {
     if (!pl) return { sh: 55, pa: 55, df: 55, sp: 55, fiz: 55 };
@@ -1129,7 +1132,7 @@
       ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y, 6.5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#14181f'; ctx.stroke();
       // skor tablosu üstte
       ctx.fillStyle = 'rgba(8,12,18,.72)'; ctx.fillRect(0, 0, W, 54);
-      ctx.textAlign = 'left'; ctx.font = '800 16px Archivo, sans-serif'; ctx.fillStyle = '#ffd24a'; ctx.fillText('PENALTI ATIŞLARI', 20, 18);
+      ctx.textAlign = 'left'; ctx.font = '800 16px Archivo, sans-serif'; ctx.fillStyle = '#ffd24a'; ctx.fillText(PH('PENALTI ATIŞLARI'), 20, 18);
       const dots = (hist, team, y) => {
         ctx.fillStyle = '#fff'; ctx.font = "700 12px 'Hanken Grotesk'";
         ctx.fillText(team === 0 ? this.clubA.name : this.clubB.name, 20, y);
@@ -1210,15 +1213,15 @@
         // GOL! — nabız
         const sc = 1 + Math.sin(this.t / 3.5) * 0.07;
         ctx.save(); ctx.translate(W / 2, H / 2 - 18); ctx.scale(sc, sc);
-        ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.9)'; ctx.font = '900 98px Archivo, sans-serif'; ctx.strokeText('GOOOL!', 0, 0);
-        ctx.fillStyle = tcol; ctx.fillText('GOOOL!', 0, 0); ctx.restore();
+        ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.9)'; ctx.font = '900 98px Archivo, sans-serif'; ctx.strokeText(PH('GOOOL!'), 0, 0);
+        ctx.fillStyle = tcol; ctx.fillText(PH('GOOOL!'), 0, 0); ctx.restore();
         ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(8,12,18,.8)'; ctx.font = '800 29px "Hanken Grotesk", sans-serif';
         ctx.strokeText(this.goalFlash.name + ' — ' + this.clubName(this.goalFlash.team), W / 2, H / 2 + 54);
         ctx.fillStyle = '#fff'; ctx.fillText(this.goalFlash.name + ' — ' + this.clubName(this.goalFlash.team), W / 2, H / 2 + 54);
       } else if (this.flash && this.t < (this._flashUntil || 0)) {
         const bx = clamp(this.ball.x, 90, W - 90), by = clamp(this.ball.y - 26, 28, H - 26);
-        ctx.font = '800 22px Archivo, sans-serif'; ctx.fillStyle = 'rgba(8,12,18,.7)'; ctx.fillText(this.flash.txt, bx + 1, by + 1);
-        ctx.fillStyle = this.flash.col; ctx.fillText(this.flash.txt, bx, by);
+        ctx.font = '800 22px Archivo, sans-serif'; ctx.fillStyle = 'rgba(8,12,18,.7)'; ctx.fillText(PH(this.flash.txt), bx + 1, by + 1);
+        ctx.fillStyle = this.flash.col; ctx.fillText(PH(this.flash.txt), bx, by);
       }
     }
   }

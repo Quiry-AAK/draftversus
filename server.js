@@ -162,7 +162,7 @@ const server = http.createServer((req, res) => {
     // gizli dosyalar (.git vb.) ve sunucu iç dosyaları dışarı sunulmaz
     const rel = safePath.slice(ROOT.length + 1).toLowerCase();
     const segs = rel.split(path.sep);
-    const PRIVATE_DIRS = { 'node_modules': 1, 'test': 1, 'docs': 1 };
+    const PRIVATE_DIRS = { 'node_modules': 1, 'test': 1, 'docs': 1, 'dist': 1, 'tools': 1 };
     const PRIVATE_FILES = { 'server.js': 1, 'package.json': 1, 'package-lock.json': 1, 'dockerfile': 1, 'readme.md': 1 };
     if (segs.some(s => s.startsWith('.')) || PRIVATE_DIRS[segs[0]] || (segs.length === 1 && PRIVATE_FILES[segs[0]])) {
       res.writeHead(404); res.end('Not found'); return;

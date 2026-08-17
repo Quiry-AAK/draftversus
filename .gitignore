@@ -6,3 +6,6 @@ Thumbs.db
 .env
 .claude/
 *.pdf
+
+# portal derleme çıktısı (tools/build-portal.js üretir)
+dist/

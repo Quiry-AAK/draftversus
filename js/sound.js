@@ -7,6 +7,10 @@
 (function () {
   let ctx = null, master = null;
   let enabled = (localStorage.getItem('kd_sfx') !== '0');
+  /* Geçici susturma (reklam oynarken portal SDK'sı bunu ister).
+     Kullanıcının kalıcı ses tercihinden AYRI tutulur — localStorage'a
+     yazılmaz, böylece reklam ortasında sekme kapansa bile ayar bozulmaz. */
+  let suspended = false;
   let noiseBuf = null;
 
   function init() {
@@ -66,8 +70,13 @@
   };
 
   window.KD_SFX = {
-    play(type) { if (!enabled) return; if (!init()) return; resume(); try { (SND[type] || (() => {}))(); } catch (_) {} },
+    play(type) { if (!enabled || suspended) return; if (!init()) return; resume(); try { (SND[type] || (() => {}))(); } catch (_) {} },
     setEnabled(v) { enabled = !!v; localStorage.setItem('kd_sfx', v ? '1' : '0'); if (v) { init(); resume(); } },
     isEnabled() { return enabled; },
+    /* Reklam süresince sustur / geri aç — kalıcı tercihe dokunmaz. */
+    suspend(v) {
+      suspended = !!v;
+      try { if (ctx) { if (suspended) ctx.suspend(); else if (enabled) ctx.resume(); } } catch (_) {}
+    },
   };
 })();
